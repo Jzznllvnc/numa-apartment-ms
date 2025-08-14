@@ -1,0 +1,166 @@
+-- SQL Schema for Apartment Management System using Supabase
+
+-- 1. Create an ENUM type for user roles
+CREATE TYPE user_role AS ENUM ('admin', 'tenant');
+
+-- 2. Create an ENUM type for unit status
+CREATE TYPE unit_status AS ENUM ('occupied', 'vacant', 'under_maintenance');
+
+-- 3. Create an ENUM type for maintenance request status
+CREATE TYPE maintenance_status AS ENUM ('pending', 'in_progress', 'completed', 'cancelled');
+
+-- 4. Users Table
+-- This table stores public user information and is linked to Supabase's auth.users table.
+CREATE TABLE users (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT,
+    avatar_url TEXT,
+    phone_number TEXT,
+    role user_role NOT NULL DEFAULT 'tenant',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Comment on Users Table
+COMMENT ON TABLE users IS 'Stores public profile information for each user, linked to auth.users.';
+
+-- 5. Apartments/Units Table
+CREATE TABLE units (
+    id SERIAL PRIMARY KEY,
+    unit_number TEXT NOT NULL UNIQUE,
+    floor INT,
+    bedrooms INT NOT NULL DEFAULT 1,
+    bathrooms INT NOT NULL DEFAULT 1,
+    size_sqft INT,
+    rent_amount NUMERIC(10, 2) NOT NULL,
+    status unit_status NOT NULL DEFAULT 'vacant',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Comment on Units Table
+COMMENT ON TABLE units IS 'Manages individual apartment units and their properties.';
+
+-- 6. Tenants Table
+-- This table can be used to store more detailed tenant-specific information if needed,
+-- but for a simpler system, the `users` table might be sufficient.
+-- For this schema, we will assume the `users` table holds tenant info.
+-- A tenant is a user with the 'tenant' role.
+
+-- 7. Leases Table
+-- This table links a tenant (user) to a specific unit.
+CREATE TABLE leases (
+    id SERIAL PRIMARY KEY,
+    unit_id INT NOT NULL REFERENCES units(id) ON DELETE RESTRICT,
+    tenant_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    rent_amount NUMERIC(10, 2) NOT NULL,
+    security_deposit NUMERIC(10, 2),
+    lease_document_url TEXT, -- URL to the file in Supabase Storage
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(unit_id, is_active) -- An active lease can only be for one unit at a time.
+);
+
+-- Comment on Leases Table
+COMMENT ON TABLE leases IS 'Manages lease agreements between tenants and units.';
+
+-- 8. Payments Table
+CREATE TABLE payments (
+    id SERIAL PRIMARY KEY,
+    lease_id INT NOT NULL REFERENCES leases(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount_paid NUMERIC(10, 2) NOT NULL,
+    payment_date DATE NOT NULL,
+    payment_for_month DATE NOT NULL, -- e.g., '2024-08-01' for August rent
+    payment_method TEXT, -- e.g., 'Bank Transfer', 'Cash'
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Comment on Payments Table
+COMMENT ON TABLE payments IS 'Logs all rent payments made by tenants.';
+
+-- 9. Maintenance Requests Table
+CREATE TABLE maintenance_requests (
+    id SERIAL PRIMARY KEY,
+    unit_id INT NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    request_details TEXT NOT NULL,
+    status maintenance_status NOT NULL DEFAULT 'pending',
+    image_url TEXT, -- Optional photo of the issue
+    date_submitted TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    date_completed TIMESTAMPTZ,
+    notes TEXT -- Admin notes on the request
+);
+
+-- Comment on Maintenance Requests Table
+COMMENT ON TABLE maintenance_requests IS 'Tracks maintenance requests from tenants.';
+
+-- 10. Announcements Table
+CREATE TABLE announcements (
+    id SERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author_id UUID REFERENCES users(id), -- Admin who posted it
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Comment on Announcements Table
+COMMENT ON TABLE announcements IS 'Stores announcements for all tenants.';
+
+
+-- SETUP ROW LEVEL SECURITY (RLS) --
+-- Enable RLS for all tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE maintenance_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
+
+-- POLICIES --
+
+-- Users Table Policies
+CREATE POLICY "Users can view their own profile." ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update their own profile." ON users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Admins can view all user profiles." ON users FOR SELECT TO authenticated USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- Units Table Policies
+CREATE POLICY "Authenticated users can view all units." ON units FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can manage units." ON units FOR ALL USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- Leases Table Policies
+CREATE POLICY "Tenants can view their own lease." ON leases FOR SELECT USING (auth.uid() = tenant_id);
+CREATE POLICY "Admins can manage all leases." ON leases FOR ALL USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- Payments Table Policies
+CREATE POLICY "Tenants can view their own payments." ON payments FOR SELECT USING (auth.uid() = tenant_id);
+CREATE POLICY "Admins can manage all payments." ON payments FOR ALL USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- Maintenance Requests Table Policies
+CREATE POLICY "Tenants can create and view their own requests." ON maintenance_requests FOR ALL USING (auth.uid() = tenant_id);
+CREATE POLICY "Admins can manage all maintenance requests." ON maintenance_requests FOR ALL USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+-- Announcements Table Policies
+CREATE POLICY "Authenticated users can view announcements." ON announcements FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can create announcements." ON announcements FOR INSERT WITH CHECK ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+CREATE POLICY "Admins can update/delete announcements." ON announcements FOR UPDATE USING ((SELECT role FROM users WHERE id = auth.uid()) = 'admin');
+
+
+-- Function to create a user profile upon new user signup in auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, full_name, avatar_url)
+  VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to call the function when a new user is created
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();

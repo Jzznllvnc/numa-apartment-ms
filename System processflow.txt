@@ -1,0 +1,66 @@
+﻿Apartment Management System - Process Flow
+1. User Roles & Authentication
+a. Roles:
+   * Admin: Manages the entire system, including properties, units, tenants, and finances. Can view all data.
+   * Tenant: Can view their lease details, payment history, submit maintenance requests, and view announcements.
+b. Authentication Flow:
+   * A user signs up by providing an email and password.
+   * Supabase handles user authentication and creates a new user in the auth.users table.
+   * A trigger in Supabase will also create a corresponding profile in the public users table, initially assigning a default 'tenant' role.
+   * The Admin can later change a user's role in the system's dashboard.
+   * Login: Users log in with their email and password. The system checks their role to determine which dashboard to display (Admin or Tenant).
+   2. Admin Dashboard & Functionalities
+a. Dashboard Overview:
+      * Displays key metrics:
+      * Total occupied units vs. total units.
+      * Recent maintenance requests.
+      * Monthly rent collection status (pie chart).
+      * Recent tenant move-ins/move-outs.
+b. Unit Management:
+      * CRUD (Create, Read, Update, Delete) operations for apartment units.
+      * Fields: Unit Number, Floor, Bedrooms, Bathrooms, Size (sq. ft.), Rent Amount, Status (Occupied, Vacant, Under Maintenance).
+      * Admin can view a list of all units and their current status.
+c. Tenant Management:
+      * CRUD for tenant information.
+      * Fields: Name, Contact Info (Phone, Email), Emergency Contact.
+      * Admin can assign a tenant to a specific unit, creating a lease.
+d. Lease Management:
+      * Create a new lease by linking a tenant to a unit.
+      * Fields: Start Date, End Date, Rent Amount, Security Deposit, Lease Document (URL to a stored file in Supabase Storage).
+      * View all active and past leases.
+e. Payment Tracking (Dummy System):
+      * Manually log rent payments received from tenants.
+      * Fields: Tenant, Unit, Amount Paid, Payment Date, Payment Method (e.g., "Bank Transfer," "Cash").
+      * View payment history for each tenant.
+      * Generate simple reports on rent collection.
+f. Maintenance Request Management:
+      * View all maintenance requests submitted by tenants.
+      * Update the status of a request (Pending, In Progress, Completed).
+      * Assign a maintenance task to staff (if applicable, this is a future enhancement).
+      * Fields: Tenant, Unit, Request Details, Date Submitted, Status, Photos (URL from Supabase Storage).
+g. Announcements:
+      * Create and post announcements for all tenants (e.g., maintenance schedules, community events).
+      * Announcements are displayed on the Tenant Dashboard.
+      3. Tenant Dashboard & Functionalities
+a. Dashboard Overview:
+         * View their current lease details.
+         * See upcoming rent payment due dates.
+         * Quick link to submit a maintenance request.
+         * View recent announcements from the Admin.
+b. My Lease & Payments:
+         * View their detailed lease agreement information.
+         * See a complete history of their past payments.
+c. Maintenance Requests:
+         * Submit a new maintenance request with a description and optional photo upload.
+         * View the status of their submitted requests.
+         4. Technical Flow & Stack Implementation
+        a. Frontend (Next.js):
+            * Pages are set up for different routes (/dashboard, /tenants, /units, etc.).
+            * UI components from shadcn/ui are used for a consistent look and feel.
+            * recharts is used to display responsive charts on the Admin dashboard.
+            * State management is handled with React Context or Zustand for simplicity.
+b. Backend (Supabase):
+            * Database: PostgreSQL database to store all application data.
+            * Auth: Manages user sign-up, login, and row-level security.
+            * Storage: Stores uploaded files like lease documents and maintenance photos.
+            * APIs: Supabase auto-generates a RESTful API, but the supabase-js client library is used in the Next.js app for data interaction.
