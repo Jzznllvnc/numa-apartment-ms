@@ -1,34 +1,90 @@
 # 🏢 Apartment Management System
 
-A modern, full-stack apartment management system built with **Next.js**, **Supabase**, and **Tailwind CSS**.
+A modern, full-stack apartment management system built with **Next.js 15**, **Supabase**, and **Tailwind CSS**.
 
-## ✨ Features
+## ✨ Current Features
 
-- 🔐 **Role-based Authentication** (Admin/Tenant)
-- 🏠 **Unit Management** - Add, edit, delete apartment units
-- 👥 **Tenant Management** - Manage tenant accounts and profiles
-- 📄 **Lease Management** - Create and track lease agreements
-- 💰 **Payment Tracking** - Log and monitor rent payments
-- 🔧 **Maintenance Requests** - Submit and manage maintenance requests
-- 📢 **Announcements** - Admin to tenant communication
-- 📊 **Analytics Dashboard** - Real-time metrics and charts
-- 📱 **Responsive Design** - Works on all devices
+### 🔐 Authentication & User Management
+- **Role-based Authentication** (Admin/Tenant)
+- **User Registration & Login** with email verification
+- **Automatic role assignment** (tenant by default)
+- **Admin role assignment** via database update
+- **Secure session management** with Supabase Auth
 
-## 🚀 Live Demo
+### 🏠 Admin Features
+- **📊 Analytics Dashboard** - Real-time metrics with interactive charts (Recharts)
+  - Unit occupancy statistics (occupied/vacant/maintenance)
+  - Revenue tracking (current vs previous month)
+  - Tenant growth metrics
+  - Maintenance request monitoring
+- **🏢 Unit Management** - Complete CRUD operations
+  - Add, edit, delete apartment units
+  - Unit details: bedrooms, bathrooms, square footage, rent
+  - Status management (occupied, vacant, under maintenance)
+  - Visual unit grid with status indicators
+- **👥 Tenant Management** 
+  - Create tenant accounts via API
+  - View all tenants with contact information
+  - Delete tenant accounts
+- **📄 Lease Management**
+  - Create and manage lease agreements
+  - Link tenants to specific units
+  - Track lease terms, deposits, and documents
+- **💰 Payment Management** 
+  - Log and track rent payments
+  - Payment history by tenant
+  - Monthly payment overviews
+- **🔧 Maintenance Requests**
+  - View and manage maintenance requests
+  - Status tracking (pending, in progress, completed, cancelled)
+  - Image uploads for maintenance issues
+- **📢 Announcements**
+  - Create and manage building announcements
+  - Admin-to-tenant communication
+- **⚙️ Admin Settings**
+  - Profile management
+  - System statistics overview
+  - Theme toggle (light/dark mode)
 
-The system includes realistic sample data with:
-- 22 apartment units across 9 floors
-- Studio, 1BR, 2BR, 3BR, and Penthouse units
-- Mixed occupancy status (occupied, vacant, under maintenance)
-- Sample announcements and realistic rent prices
+### 🏠 Tenant Features
+- **🏠 Tenant Dashboard**
+  - Personal lease information display
+  - Payment history tracking
+  - Maintenance request submission
+  - Announcement viewing
+- **👤 Profile Management**
+  - Update personal information
+  - Contact details management
+
+### 📱 UI/UX Features
+- **Modern Design** with Tailwind CSS and Shadcn UI components
+- **Responsive Layout** - Works on all devices
+- **Dark/Light Theme** support
+- **Interactive Charts** using Recharts
+- **Form Validation** with React Hook Form + Zod
+- **Loading States** and error handling
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** Next.js 14, React, TypeScript
-- **Backend:** Supabase (PostgreSQL + Auth + Storage)
-- **UI/Styling:** Tailwind CSS, Shadcn UI
-- **Charts:** Recharts
+- **Frontend:** Next.js 15.4.6, React 19.1.1, TypeScript 5.9.2
+- **Backend:** Supabase (PostgreSQL + Auth + Storage + RLS)
+- **UI/Styling:** Tailwind CSS 3.4.17, Shadcn UI, Tailwind Animate
+- **Forms:** React Hook Form 7.62.0 + Zod 4.0.17 validation
+- **Charts:** Recharts 2.15.4
+- **Icons:** Lucide React 0.539.0
+- **Date Handling:** date-fns 4.1.0
 - **Deployment:** Vercel/Netlify ready
+
+## 📊 Database Schema
+
+Complete PostgreSQL schema with Row Level Security (RLS):
+
+- **users** - User profiles with roles (admin/tenant)
+- **units** - Apartment unit details and status
+- **leases** - Tenant-unit relationships with terms
+- **payments** - Rent payment records and history
+- **maintenance_requests** - Service requests with status tracking
+- **announcements** - Management communications
 
 ## 🎯 Setup Instructions
 
@@ -40,15 +96,16 @@ cp env-example.txt .env.local
 # Add your Supabase credentials to .env.local
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### 2. Database Setup
 1. Create a Supabase project at [supabase.com](https://supabase.com)
-2. Run the SQL schema from `temp/SQL Schema.txt` in your Supabase SQL Editor
+2. Run the SQL schema from `SQL Schema.txt` in your Supabase SQL Editor
 3. Run the RLS policy fixes from `fix-rls-policies.sql`
-4. Add sample data from `sample-data.sql`
+4. **Optional:** Add sample data from `sample-data.sql` (22 units with realistic pricing)
 
-### 3. Run the Application
+### 3. Install Dependencies & Run
 ```bash
 npm install
 npm run dev
@@ -56,107 +113,104 @@ npm run dev
 
 Visit `http://localhost:3000`
 
-## 👨‍💼 Admin Features
-
-### Dashboard
-- Real-time metrics (revenue, occupancy, maintenance requests)
-- Unit status breakdown (occupied/vacant/maintenance)
-- Interactive charts and analytics
-
-### Unit Management
-- ➕ Add new apartment units
-- ✏️ Edit unit details (bedrooms, bathrooms, rent, status)
-- 🗑️ Delete units
-- 📊 View unit grid with status indicators
-
-### Quick Actions
-- Navigate to tenant management
-- Access lease management
-- Handle maintenance requests
-- Post announcements
-
-## 🏠 Tenant Features
-
-### Dashboard
-- View lease information
-- Check payment history
-- Submit maintenance requests
-- Read announcements from management
-
 ## 📊 Sample Data Included
 
-The system comes with realistic sample data:
+The system includes realistic sample data (optional):
 
-### Units
-- **Studios:** $1,200-$1,300 (450-485 sq ft)
-- **1 Bedroom:** $1,600-$1,750 (650-720 sq ft)  
-- **2 Bedroom:** $2,150-$2,400 (920-1,020 sq ft)
-- **3 Bedroom:** $2,900-$3,400 (1,250-1,400 sq ft)
-- **Penthouse:** $4,500-$4,700 (1,800-1,850 sq ft)
+### 22 Apartment Units
+- **Studios (6 units):** $1,200-$1,300 (450-485 sq ft)
+- **1 Bedroom (6 units):** $1,600-$1,750 (650-720 sq ft)  
+- **2 Bedroom (6 units):** $2,150-$2,400 (920-1,020 sq ft)
+- **3 Bedroom (2 units):** $2,900-$3,400 (1,250-1,400 sq ft)
+- **Penthouse (2 units):** $4,500-$4,700 (1,800-1,850 sq ft)
 
-### Status Distribution
+### Mixed Occupancy Status
 - ✅ 11 Occupied units
-- 🔵 9 Vacant units
+- 🔵 9 Vacant units  
 - 🟡 2 Under maintenance
 
-## 🔐 User Accounts
+## 🔐 User Account Setup
 
 ### Create Admin Account
 1. Register at `/register`
-2. In Supabase, change the user's role to 'admin' in the `users` table
+2. In Supabase dashboard, go to Authentication → Users
+3. Find your user and update the `role` field in the `users` table to `'admin'`
 
-### Create Tenant Account
-1. Register at `/register` (automatically gets 'tenant' role)
-2. Or use the recommended test account:
-   - Email: `tenant@example.com`
-   - Password: `password123`
+### Test Tenant Account
+Use the registration page at `/register` - accounts automatically get 'tenant' role.
 
-## 🏗️ Architecture
+## 🏗️ Project Structure
 
-### Database Schema
-- **users** - User profiles with roles
-- **units** - Apartment unit details
-- **leases** - Tenant-unit relationships
-- **payments** - Rent payment records
-- **maintenance_requests** - Service requests
-- **announcements** - Management communications
+```
+src/
+├── app/
+│   ├── admin/           # Admin dashboard and management pages
+│   │   ├── announcements/
+│   │   ├── leases/
+│   │   ├── maintenance/
+│   │   ├── payments/
+│   │   ├── settings/
+│   │   ├── tenants/
+│   │   └── units/
+│   ├── api/             # API routes for data operations
+│   │   └── tenants/
+│   ├── login/           # Authentication pages
+│   ├── register/
+│   └── tenant/          # Tenant dashboard
+├── components/
+│   ├── admin/           # Admin-specific components
+│   └── ui/              # Reusable UI components (Shadcn)
+├── lib/                 # Utility functions
+├── types/               # TypeScript type definitions
+└── utils/               # Supabase client setup
+```
 
-### Security
-- Row Level Security (RLS) enabled
-- Role-based access control
-- Secure authentication with Supabase Auth
+## 🚀 Development Status
 
-### UI Components
-- Modern card-based design
-- Responsive grid layouts
-- Interactive forms with validation
-- Real-time data updates
+### ✅ Completed Features
+- Complete authentication system
+- Admin dashboard with analytics
+- Full CRUD for units, tenants, leases, payments
+- Maintenance request management
+- Announcements system
+- Responsive UI with dark/light themes
+- Database schema with RLS policies
+
+### 🚧 Areas for Enhancement
+- [ ] Email notifications for maintenance requests
+- [ ] Payment integration (Stripe/PayPal)
+- [ ] Lease document upload/storage
+- [ ] Advanced reporting and exports
+- [ ] Mobile app companion
+- [ ] Automated rent reminders
+- [ ] Tenant portal enhancements
 
 ## 🚀 Deployment
 
-The application is ready for deployment to:
+Ready for deployment to:
 - **Vercel** (recommended for Next.js)
-- **Netlify**
+- **Netlify** 
 - Any platform supporting Node.js
 
-Environment variables needed:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### Required Environment Variables:
+```
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
 
-## 📝 Next Steps
+## 🔒 Security Features
 
-Planned features:
-- [ ] Lease document upload/storage
-- [ ] Email notifications
-- [ ] Payment integration
-- [ ] Tenant portal enhancements
-- [ ] Advanced reporting
-- [ ] Mobile app
-
-## 🤝 Contributing
-
-This is a complete, production-ready apartment management system. Feel free to customize and extend it for your needs!
+- **Row Level Security (RLS)** enabled on all tables
+- **Role-based access control** for admin/tenant features
+- **Secure authentication** with Supabase Auth
+- **Input validation** with Zod schemas
+- **Protected API routes** with proper authorization
 
 ## 📄 License
 
-MIT License - feel free to use this project for personal or commercial purposes.
+MIT License - Feel free to use this project for personal or commercial purposes.
+
+---
+
+**Built with ❤️ using modern web technologies for efficient apartment management.**
