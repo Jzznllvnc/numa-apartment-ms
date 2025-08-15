@@ -24,6 +24,7 @@ interface Lease {
   created_at: string
   units: {
     unit_number: string
+    rent_amount: number
   }
   users: {
     full_name: string
@@ -43,6 +44,7 @@ interface Unit {
   id: number
   unit_number: string
   status: string
+  rent_amount: number
 }
 
 interface Tenant {
@@ -101,17 +103,17 @@ export default function LeasesManagement() {
         .from('leases')
         .select(`
           *,
-          units (unit_number),
+          units (unit_number, rent_amount),
           users (full_name)
         `)
         .order('created_at', { ascending: false })
 
       if (leasesError) throw leasesError
 
-      // Fetch available units (vacant or under maintenance)
+      // Fetch available units (vacant or under maintenance) with rent amounts
       const { data: unitsData, error: unitsError } = await supabase
         .from('units')
-        .select('id, unit_number, status')
+        .select('id, unit_number, status, rent_amount')
         .order('unit_number')
 
       if (unitsError) throw unitsError
@@ -134,6 +136,18 @@ export default function LeasesManagement() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle unit selection change to auto-populate rent amount
+  const handleUnitChange = (unitId: string) => {
+    const selectedUnit = units.find(unit => unit.id.toString() === unitId)
+    const rentAmount = selectedUnit ? selectedUnit.rent_amount.toString() : ''
+    
+    setFormData({ 
+      ...formData, 
+      unit_id: unitId,
+      rent_amount: rentAmount
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,12 +210,17 @@ export default function LeasesManagement() {
 
   const handleEdit = (lease: Lease) => {
     setEditingLease(lease)
+    
+    // Find the unit to get the current rent amount
+    const selectedUnit = units.find(unit => unit.id === lease.unit_id)
+    const unitRentAmount = selectedUnit ? selectedUnit.rent_amount.toString() : lease.rent_amount
+    
     setFormData({
       unit_id: lease.unit_id.toString(),
       tenant_id: lease.tenant_id,
       start_date: lease.start_date,
       end_date: lease.end_date,
-      rent_amount: lease.rent_amount,
+      rent_amount: unitRentAmount, // Use unit's current rent amount, not lease's stored amount
       security_deposit: lease.security_deposit || ''
     })
     setShowFormModal(true)
@@ -332,7 +351,7 @@ export default function LeasesManagement() {
                 </div>
                 <div className="flex items-center">
                   <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
-                  <span>${Number(lease.rent_amount).toLocaleString()}/month</span>
+                  <span>${Number(lease.units.rent_amount).toLocaleString()}/month</span>
                 </div>
                 {lease.security_deposit && (
                   <div className="text-xs text-gray-500">
@@ -420,7 +439,7 @@ export default function LeasesManagement() {
               </label>
               <Select
                 value={formData.unit_id}
-                onChange={(value) => setFormData({ ...formData, unit_id: value })}
+                onChange={handleUnitChange}
                 placeholder="Select a unit"
                 required
               >
@@ -481,12 +500,16 @@ export default function LeasesManagement() {
               <Input
                 type="number"
                 value={formData.rent_amount}
-                onChange={(e) => setFormData({ ...formData, rent_amount: e.target.value })}
                 min="0"
                 step="0.01"
-                placeholder="0.00"
+                placeholder="Select a unit to see rent amount"
                 required
+                disabled
+                className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Rent amount is automatically set based on the selected unit
+              </p>
             </div>
 
             <div className="space-y-2">

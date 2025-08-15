@@ -458,6 +458,8 @@ export default function TenantDashboard() {
     announcements: [],
   })
   const [loading, setLoading] = useState(true)
+  const [unitImageUrl, setUnitImageUrl] = useState<string>('/placeholder-unit.svg')
+  const [showImageModal, setShowImageModal] = useState(false)
   const supabase = createClient()
   const [view, setView] = useState<'dashboard' | 'profile'>('dashboard')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -468,6 +470,23 @@ export default function TenantDashboard() {
   const [requestError, setRequestError] = useState('')
   const [requestSuccess, setRequestSuccess] = useState('')
   const { show } = useAlerts()
+
+  // Helper function to get signed unit image URL
+  const getSignedUnitImageUrl = async (imagePath: string): Promise<string> => {
+    if (!imagePath) return '/placeholder-unit.svg'
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from('units')
+        .createSignedUrl(imagePath, 3600) // 1 hour expiry
+      
+      if (error) throw error
+      return data.signedUrl
+    } catch (err) {
+      console.error('Error getting signed URL:', err)
+      return '/placeholder-unit.svg'
+    }
+  }
 
   useEffect(() => {
     fetchTenantData()
@@ -493,7 +512,7 @@ export default function TenantDashboard() {
         .from('leases')
         .select(`
           *,
-          unit:units(*)
+          unit:units(id, unit_number, floor, bedrooms, bathrooms, size_sqft, rent_amount, image_url)
         `)
         .eq('tenant_id', authUser.id)
         .eq('is_active', true)
@@ -537,6 +556,14 @@ export default function TenantDashboard() {
         maintenanceRequests: maintenanceRequests || [],
         announcements: announcements || [],
       })
+
+      // Load unit image if available
+      if (lease?.unit?.image_url) {
+        const imageUrl = await getSignedUnitImageUrl(lease.unit.image_url)
+        setUnitImageUrl(imageUrl)
+      } else {
+        setUnitImageUrl('/placeholder-unit.svg')
+      }
     } catch (error) {
       console.error('Error fetching tenant data:', error)
     } finally {
@@ -682,21 +709,47 @@ export default function TenantDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="rounded-2xl border bg-card p-6 shadow-sm">
                 <div className="flex items-start justify-between">
-                  <div className="text-sm text-gray-500 dark:text-gray-300">Current Unit</div>
-                  <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                    <Home className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <div>
+                    <div className="text-sm text-gray-500 dark:text-gray-300 mb-6">Current Unit</div>
+                    <div className="mt-3 flex items-baseline gap-3">
+                      <div className="text-3xl font-semibold leading-none">
+                        {data.lease?.unit?.unit_number || 'Not Assigned'}
+                      </div>
+                    </div>
+                    {data.lease?.unit && (
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        Floor {data.lease.unit.floor} &nbsp;|&nbsp; {data.lease.unit.bedrooms} bed, {data.lease.unit.bathrooms} bath
+                      </div>
+                    )}
+                  </div>
+                  <div className="w-28 h-28 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 relative group">
+                    <Image 
+                      src={unitImageUrl} 
+                      alt={`Unit ${data.lease?.unit?.unit_number || ''}`} 
+                      width={5274} 
+                      height={3517} 
+                      className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
+                      onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+                      onClick={() => setShowImageModal(true)}
+                    />
+                    {/* Hover Preview - Only visible on desktop */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-50 hidden md:block">
+                      <div className="absolute top-0 right-0 transform translate-x-full -translate-y-4 w-80 h-60 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-gray-200 dark:border-gray-600 overflow-hidden">
+                        <Image 
+                          src={unitImageUrl} 
+                          alt={`Unit ${data.lease?.unit?.unit_number || ''} - Full Preview`} 
+                          width={5274} 
+                          height={3517} 
+                          className="w-full h-full object-cover"
+                          onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2">
+                          <p className="text-xs font-medium">Unit {data.lease?.unit?.unit_number || ''}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-3 flex items-baseline gap-3">
-                  <div className="text-3xl font-semibold leading-none">
-                    {data.lease?.unit?.unit_number || 'Not Assigned'}
-                  </div>
-                </div>
-                {data.lease?.unit && (
-                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Floor {data.lease.unit.floor} • {data.lease.unit.bedrooms} bed, {data.lease.unit.bathrooms} bath
-                  </div>
-                )}
               </div>
 
               <div className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -708,7 +761,7 @@ export default function TenantDashboard() {
                 </div>
                 <div className="mt-3 flex items-baseline gap-3">
                   <div className="text-3xl font-semibold leading-none">
-                    ${data.lease?.rent_amount?.toLocaleString() || '0'}
+                    ${data.lease?.unit?.rent_amount?.toLocaleString() || '0'}
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -880,7 +933,7 @@ export default function TenantDashboard() {
           </div>
           <div>
             <label htmlFor="request-file" className="block text-sm font-medium mb-1">Attach Photo (Optional)</label>
-            <input type="file" id="request-file" accept="image/*" onChange={(e) => setRequestFile(e.target.files?.[0] || null)} className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+            <input type="file" id="request-file" accept="image/*" onChange={(e) => setRequestFile(e.target.files?.[0] || null)} className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 dark:file:bg-gray-800 file:text-blue-700 dark:file:text-gray-200 hover:file:bg-blue-100 dark:hover:file:bg-gray-700" />
             {requestFile && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Selected file: {requestFile.name}</p>}
           </div>
           {requestError && <p className="text-sm text-red-600 dark:text-red-400">{requestError}</p>}
@@ -890,6 +943,37 @@ export default function TenantDashboard() {
             <Button type="submit" disabled={submittingRequest}>{submittingRequest ? 'Submitting...' : 'Submit Request'}</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Unit Image Modal */}
+      <Modal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        title={`Unit ${data.lease?.unit?.unit_number || ''} Image`}
+        size="xl"
+      >
+        <div className="flex flex-col items-center dark:bg-[#111827]">
+          <div className="w-full max-w-4xl max-h-[70vh] overflow-hidden rounded-lg">
+            <Image 
+              src={unitImageUrl} 
+              alt={`Unit ${data.lease?.unit?.unit_number || ''} - Full Size`} 
+              width={5274} 
+              height={3517} 
+              className="w-full h-full object-contain"
+              onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+            />
+          </div>
+          {data.lease?.unit && (
+            <div className="mt-4 text-center">
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Unit {data.lease.unit.unit_number}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Floor {data.lease.unit.floor} &nbsp;|&nbsp; {data.lease.unit.bedrooms} bed, {data.lease.unit.bathrooms} bath &nbsp;|&nbsp; {data.lease.unit.size_sqft} sq ft
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Logout confirmation */}

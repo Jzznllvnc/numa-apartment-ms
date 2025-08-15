@@ -21,6 +21,7 @@ export interface Unit {
   size_sqft: number | null;
   rent_amount: number;
   status: UnitStatus;
+  image_url?: string;
   created_at: string;
   updated_at: string;
 }

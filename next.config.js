@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['your-supabase-project.supabase.co'],
+    domains: [
+      'uhxmhnmzgboeylrtzkwt.supabase.co', // Your actual Supabase domain
+      'via.placeholder.com' // For placeholder images
+    ],
   },
 }
 

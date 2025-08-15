@@ -1,16 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
-import { Building, Edit, Trash2, HousePlus } from 'lucide-react'
+import { Building, Edit, Trash2, HousePlus, Bed, Bath, Square, Upload, X, AlertCircle } from 'lucide-react'
 import { Unit } from '@/types/database'
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
+import Image from 'next/image'
 
 interface UnitFormData {
   unit_number: string
@@ -20,12 +21,71 @@ interface UnitFormData {
   size_sqft: number
   rent_amount: number
   status: 'vacant' | 'occupied' | 'under_maintenance'
+  image_url?: string
+}
+
+interface UploadError {
+  type: 'size' | 'type' | 'general'
+  message: string
+}
+
+// Image cache to store signed URLs
+const imageCache = new Map<string, string>()
+
+// Helper function to get cached image URL
+const getCachedImageUrl = (imagePath: string): string | null => {
+  if (!imagePath) return '/placeholder-unit.svg'
+  
+  // Check memory cache first
+  if (imageCache.has(imagePath)) {
+    return imageCache.get(imagePath)!
+  }
+  
+  // Check localStorage cache
+  try {
+    const cached = localStorage.getItem(`unit_image_${imagePath}`)
+    if (cached) {
+      const { url, expiry } = JSON.parse(cached)
+      // Check if cached URL hasn't expired (cache for 50 minutes, signed URLs expire in 1 hour)
+      if (Date.now() < expiry) {
+        imageCache.set(imagePath, url)
+        return url
+      } else {
+        // Remove expired cache
+        localStorage.removeItem(`unit_image_${imagePath}`)
+      }
+    }
+  } catch (error) {
+    console.error('Error reading image cache:', error)
+  }
+  
+  return null
+}
+
+// Helper function to cache image URL
+const cacheImageUrl = (imagePath: string, url: string) => {
+  if (!imagePath) return
+  
+  // Cache in memory
+  imageCache.set(imagePath, url)
+  
+  // Cache in localStorage with expiry (50 minutes from now)
+  try {
+    const cacheData = {
+      url,
+      expiry: Date.now() + (50 * 60 * 1000) // 50 minutes
+    }
+    localStorage.setItem(`unit_image_${imagePath}`, JSON.stringify(cacheData))
+  } catch (error) {
+    console.error('Error caching image URL:', error)
+  }
 }
 
 export default function UnitsManagement() {
   const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
@@ -39,7 +99,10 @@ export default function UnitsManagement() {
     rent_amount: 1000,
     status: 'vacant'
   })
-  const [error, setError] = useState('')
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [uploadError, setUploadError] = useState<UploadError | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
   const { setActions } = useAdminActions()
   const { show } = useAlerts()
@@ -55,6 +118,9 @@ export default function UnitsManagement() {
       rent_amount: 1000,
       status: 'vacant'
     })
+    setImagePreview(null)
+    setUploadedFile(null)
+    setUploadError(null)
     setShowFormModal(true)
   }
 
@@ -80,6 +146,120 @@ export default function UnitsManagement() {
       show({ title: 'Error', description: 'Error fetching units', color: 'danger' })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getSignedImageUrl = async (imagePath: string): Promise<string> => {
+    if (!imagePath) return '/placeholder-unit.svg'
+    
+    // Check cache first
+    const cachedUrl = getCachedImageUrl(imagePath)
+    if (cachedUrl) {
+      return cachedUrl
+    }
+    
+    try {
+      const { data, error } = await supabase.storage
+        .from('units')
+        .createSignedUrl(imagePath, 3600) // 1 hour expiry
+      
+      if (error) throw error
+      
+      // Cache the signed URL
+      cacheImageUrl(imagePath, data.signedUrl)
+      
+      return data.signedUrl
+    } catch (err) {
+      console.error('Error getting signed URL:', err)
+      return '/placeholder-unit.svg'
+    }
+  }
+
+  const validateFile = (file: File): UploadError | null => {
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      return {
+        type: 'type',
+        message: 'Only image files are accepted.'
+      }
+    }
+
+    // Check file size (5MB limit)
+    const maxBytes = 5 * 1024 * 1024 // 5MB
+    if (file.size > maxBytes) {
+      return {
+        type: 'size',
+        message: `File is too big. Max file size is 5 MB.`
+      }
+    }
+
+    return null
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file
+    const error = validateFile(file)
+    if (error) {
+      setUploadError(error)
+      setUploadedFile(null)
+      setImagePreview(null)
+      return
+    }
+
+    // Clear any previous errors
+    setUploadError(null)
+    setUploadedFile(file)
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => setImagePreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+
+    // Upload to storage
+    try {
+      setUploading(true)
+      const { data: authData } = await supabase.auth.getUser()
+      const user = authData.user
+      if (!user) {
+        show({ title: 'Error', description: 'Not authenticated', color: 'danger' })
+        return
+      }
+
+      const fileExt = file.name.split('.').pop() || 'jpg'
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('units')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type,
+        })
+
+      if (uploadError) throw uploadError
+      
+      setFormData({ ...formData, image_url: filePath })
+      
+    } catch (err: any) {
+      console.error('Error uploading image:', err)
+      setUploadError({
+        type: 'general',
+        message: err.message || 'Failed to upload image'
+      })
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -125,11 +305,13 @@ export default function UnitsManagement() {
 
       setShowFormModal(false)
       setEditingUnit(null)
+      setImagePreview(null)
+      setUploadedFile(null)
+      setUploadError(null)
       fetchUnits()
     } catch (err: any) {
       console.error('Error saving unit:', err)
       show({ title: 'Error', description: err.message || 'Failed to save unit', color: 'danger' })
-      // Close modal on any error for better UX
       setShowFormModal(false)
       setEditingUnit(null)
     } finally {
@@ -137,7 +319,7 @@ export default function UnitsManagement() {
     }
   }
 
-  const handleEdit = (unit: Unit) => {
+  const handleEdit = async (unit: Unit) => {
     setEditingUnit(unit)
     setFormData({
       unit_number: unit.unit_number,
@@ -146,8 +328,20 @@ export default function UnitsManagement() {
       bathrooms: unit.bathrooms,
       size_sqft: unit.size_sqft || 500,
       rent_amount: Number(unit.rent_amount),
-      status: unit.status
+      status: unit.status,
+      image_url: unit.image_url
     })
+    
+    // Set image preview if unit has image
+    if (unit.image_url) {
+      const signedUrl = await getSignedImageUrl(unit.image_url)
+      setImagePreview(signedUrl)
+    } else {
+      setImagePreview(null)
+    }
+    
+    setUploadedFile(null)
+    setUploadError(null)
     setShowFormModal(true)
   }
 
@@ -160,6 +354,21 @@ export default function UnitsManagement() {
     if (!deletingUnit) return
 
     try {
+      // Delete image from storage if exists
+      if (deletingUnit.image_url) {
+        await supabase.storage
+          .from('units')
+          .remove([deletingUnit.image_url])
+        
+        // Clear cached image
+        imageCache.delete(deletingUnit.image_url)
+        try {
+          localStorage.removeItem(`unit_image_${deletingUnit.image_url}`)
+        } catch (error) {
+          console.error('Error clearing image cache:', error)
+        }
+      }
+
       const { error } = await supabase
         .from('units')
         .delete()
@@ -193,6 +402,17 @@ export default function UnitsManagement() {
   const closeModal = () => {
     setShowFormModal(false)
     setEditingUnit(null)
+    setImagePreview(null)
+    setUploadedFile(null)
+    setUploadError(null)
+  }
+
+  const removeImage = () => {
+    setImagePreview(null)
+    setUploadedFile(null)
+    setFormData({ ...formData, image_url: undefined })
+    setUploadError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   if (loading) {
@@ -240,60 +460,17 @@ export default function UnitsManagement() {
         </div>
       </div>
 
-      {/* Units Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Units Grid - New Design */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {units.map((unit) => (
-          <Card key={unit.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <CardTitle className="text-lg">Unit {unit.unit_number}</CardTitle>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
-                  {unit.status.replace('_', ' ')}
-                </span>
-              </div>
-              <CardDescription>Floor {unit.floor}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Bedrooms:</span>
-                  <span>{unit.bedrooms}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Bathrooms:</span>
-                  <span>{unit.bathrooms}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Size:</span>
-                  <span>{unit.size_sqft} sq ft</span>
-                </div>
-                <div className="flex justify-between font-medium">
-                  <span>Rent:</span>
-                  <span>${Number(unit.rent_amount).toLocaleString()}/month</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEdit(unit)}
-                >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteClick(unit)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <UnitCard 
+            key={unit.id} 
+            unit={unit} 
+            onEdit={handleEdit}
+            onDelete={handleDeleteClick}
+            getStatusColor={getStatusColor}
+            getSignedImageUrl={getSignedImageUrl}
+          />
         ))}
       </div>
 
@@ -313,7 +490,7 @@ export default function UnitsManagement() {
         </Card>
       )}
 
-      {/* Add/Edit Unit Modal */}
+      {/* Add/Edit Unit Modal - Redesigned */}
       <Modal
         isOpen={showFormModal}
         onClose={closeModal}
@@ -411,7 +588,7 @@ export default function UnitsManagement() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                 Status
               </label>
@@ -425,6 +602,122 @@ export default function UnitsManagement() {
                 <option value="under_maintenance">Under Maintenance</option>
               </Select>
             </div>
+
+            {/* Compact Image Upload Section */}
+            <div className="space-y-3 md:col-span-2">
+              <label className="text-sm font-medium leading-none">Unit Image</label>
+              
+              {/* File Upload Area */}
+              <div className="space-y-3">
+                {/* Upload Button */}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="w-full h-10"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploading ? 'Uploading...' : 'Choose file'}
+                  </Button>
+                </div>
+
+                {/* File Preview or Error */}
+                {uploadedFile && !uploadError && (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <Upload className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(uploadedFile.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Current Image Preview (for editing) */}
+                {imagePreview && !uploadedFile && (
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 relative rounded-lg overflow-hidden">
+                        <Image
+                          src={imagePreview}
+                          alt="Current unit image"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Current Image
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Click "Choose file" to replace
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {uploadError && (
+                  <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                          {uploadError.type === 'size' ? 'Trust Jamin.png' : 'hello-world.pdf'}
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          {uploadError.message}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUploadError(null)
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t border-border">
@@ -432,11 +725,11 @@ export default function UnitsManagement() {
               type="button" 
               variant="outline" 
               onClick={closeModal}
-              disabled={saving}
+              disabled={saving || uploading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || uploading}>
               {saving ? 'Saving...' : (editingUnit ? 'Update Unit' : 'Add Unit')}
             </Button>
           </div>
@@ -455,6 +748,118 @@ export default function UnitsManagement() {
       />
 
       <div className="h-8"></div>
+    </div>
+  )
+}
+
+// New UnitCard component with fixed height and cached images
+function UnitCard({ 
+  unit, 
+  onEdit, 
+  onDelete, 
+  getStatusColor, 
+  getSignedImageUrl 
+}: { 
+  unit: Unit
+  onEdit: (unit: Unit) => void
+  onDelete: (unit: Unit) => void
+  getStatusColor: (status: string) => string
+  getSignedImageUrl: (path: string) => Promise<string>
+}) {
+  const [imageUrl, setImageUrl] = useState<string>('/placeholder-unit.svg')
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  useEffect(() => {
+    const loadImage = async () => {
+      if (unit.image_url && !imageLoaded) {
+        const url = await getSignedImageUrl(unit.image_url)
+        setImageUrl(url)
+        setImageLoaded(true)
+      }
+    }
+    
+    loadImage()
+  }, [unit.image_url, getSignedImageUrl, imageLoaded])
+
+  return (
+    <div className="relative group">
+      <Card className="h-[480px] hover:shadow-xl transition-all duration-300 overflow-hidden">
+        {/* Image Section */}
+        <div className="relative h-60 bg-gray-200 dark:bg-gray-800">
+          <Image
+            src={imageUrl}
+            alt={`Unit ${unit.unit_number}`}
+            fill
+            className="object-cover"
+            onError={() => setImageUrl('/placeholder-unit.svg')}
+          />
+          {/* Status badge positioned on image */}
+          <div className="absolute top-3 left-3">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
+              {unit.status.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+
+        <CardContent className="p-4">
+          <div className="space-y-3 mb-4">
+            {/* Rent Amount - Primary text */}
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              ${Number(unit.rent_amount).toLocaleString()}/month
+            </div>
+            
+            {/* Unit Number - Secondary text */}
+            <div className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+              Unit {unit.unit_number}
+            </div>
+            
+            {/* Floor - Subtle text */}
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Floor {unit.floor}
+            </div>
+
+            {/* Bed, Bath, Size with icons in pill containers */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs text-gray-600 dark:text-gray-400">
+                <Bed className="h-3 w-3" />
+                <span>{unit.bedrooms} Bed{unit.bedrooms !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs text-gray-600 dark:text-gray-400">
+                <Bath className="h-3 w-3" />
+                <span>{unit.bathrooms} Bath{unit.bathrooms !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs text-gray-600 dark:text-gray-400">
+                <Square className="h-3 w-3" />
+                <span>{unit.size_sqft} sq ft</span>
+              </div>
+            </div>
+
+            {/* Separator line - moved below pills */}
+            <hr className="border-gray-200 dark:border-gray-700" />
+          </div>
+
+          {/* Edit/Delete buttons - moved inside card at bottom-right */}
+          <div className="flex gap-2 justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onEdit(unit)}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDelete(unit)}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
