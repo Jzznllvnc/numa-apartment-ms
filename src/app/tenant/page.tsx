@@ -168,24 +168,25 @@ function NotificationButton() {
   }, [clearedAfter, seenAfter])
 
   useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (open && containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false)
       }
     }
-    const onKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
-    const onScroll = () => setOpen(false)
-    window.addEventListener('pointerdown', onPointerDown, { capture: true })
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown, { capture: true } as any)
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('scroll', onScroll, true)
+    
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
     }
-  }, [])
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
 
   const toggleOpen = () => {
     setOpen(!open)
@@ -469,6 +470,9 @@ export default function TenantDashboard() {
   const [submittingRequest, setSubmittingRequest] = useState(false)
   const [requestError, setRequestError] = useState('')
   const [requestSuccess, setRequestSuccess] = useState('')
+  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false)
+  const [showPaymentNoteModal, setShowPaymentNoteModal] = useState(false)
+  const [selectedPaymentNote, setSelectedPaymentNote] = useState<{month: string, note: string} | null>(null)
   const { show } = useAlerts()
 
   // Helper function to get signed unit image URL
@@ -545,7 +549,6 @@ export default function TenantDashboard() {
         .from('announcements')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(3)
 
       if (announcementsError) throw announcementsError
 
@@ -829,15 +832,54 @@ export default function TenantDashboard() {
                 <CardContent>
                   {data.payments.length > 0 ? (
                     <div className="space-y-4">
-                      {data.payments.map((payment) => (
-                        <div key={payment.id} className="flex justify-between items-center">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Paid on {new Date(payment.payment_date).toLocaleDateString()}</p>
+                      {data.payments.map((payment, index) => (
+                        <div key={payment.id}>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Paid on {new Date(payment.payment_date).toLocaleDateString()}</p>
+                              {payment.notes && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedPaymentNote({
+                                      month: new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                                      note: payment.notes!
+                                    })
+                                    setShowPaymentNoteModal(true)
+                                  }}
+                                  className="text-xs px-2 py-1 h-6 w-fit mt-2 sm:hidden"
+                                >
+                                  View Note
+                                </Button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-6">
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">${payment.amount_paid.toLocaleString()}</span>
+                              {payment.notes && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedPaymentNote({
+                                      month: new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                                      note: payment.notes!
+                                    })
+                                    setShowPaymentNoteModal(true)
+                                  }}
+                                  className="text-xs px-2 py-1 h-6 hidden sm:inline-flex"
+                                >
+                                  View Note
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">${payment.amount_paid.toLocaleString()}</span>
+                          {index < data.payments.length - 1 && (
+                            <div className="mt-4 border-b border-gray-100 dark:border-gray-800"></div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -848,7 +890,7 @@ export default function TenantDashboard() {
               </Card>
 
               {/* Maintenance Requests */}
-              <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 self-start">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -887,7 +929,7 @@ export default function TenantDashboard() {
               </Card>
 
               {/* Announcements */}
-              <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+              <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 self-start">
                 <CardHeader>
                   <CardTitle className="text-gray-900 dark:text-gray-100">Announcements</CardTitle>
                   <CardDescription className="text-gray-500 dark:text-gray-400">Latest updates from management</CardDescription>
@@ -895,13 +937,56 @@ export default function TenantDashboard() {
                 <CardContent>
                   {data.announcements.length > 0 ? (
                     <div className="space-y-4">
-                      {data.announcements.map((announcement) => (
+                      {/* Always show first 2 announcements */}
+                      {data.announcements.slice(0, 2).map((announcement) => (
                         <div key={announcement.id} className="border rounded-lg p-3">
                           <h4 className="text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">{announcement.title}</h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{announcement.content}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(announcement.created_at).toLocaleDateString()}</p>
                         </div>
                       ))}
+                      
+                      {/* Conditionally show remaining announcements with smooth transition */}
+                      <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                        showAllAnnouncements 
+                          ? 'max-h-[2000px] opacity-100' 
+                          : 'max-h-0 opacity-0'
+                      }`}>
+                        <div className="space-y-4">
+                          {data.announcements.slice(2).map((announcement) => (
+                            <div key={announcement.id} className="border rounded-lg p-3">
+                              <h4 className="text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">{announcement.title}</h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{announcement.content}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(announcement.created_at).toLocaleDateString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {data.announcements.length > 2 && (
+                        <div className="flex flex-col items-center text-center p-4">
+                          <button
+                            onClick={() => setShowAllAnnouncements(!showAllAnnouncements)}
+                            className="flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
+                          >
+                            {showAllAnnouncements ? (
+                              <>
+                                See Less
+                                <svg className="ml-1 h-4 w-4 transform rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </>
+                            ) : (
+                              <>
+                                See More ({data.announcements.length - 2} more)
+                                <svg className="ml-1 h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-gray-500 dark:text-gray-400 text-center py-8">No announcements at this time</p>
@@ -976,6 +1061,36 @@ export default function TenantDashboard() {
         </div>
       </Modal>
 
+      {/* Payment Note Modal */}
+      <Modal
+        isOpen={showPaymentNoteModal}
+        onClose={() => {
+          setShowPaymentNoteModal(false)
+          setSelectedPaymentNote(null)
+        }}
+        title={`Payment Note - ${selectedPaymentNote?.month || ''}`}
+        size="md"
+      >
+        <div className="p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              {selectedPaymentNote?.note}
+            </p>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPaymentNoteModal(false)
+                setSelectedPaymentNote(null)
+              }}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Logout confirmation */}
       <Modal
         isOpen={showLogoutConfirm}
@@ -985,7 +1100,7 @@ export default function TenantDashboard() {
         hideHeader
       >
         <div className="flex flex-col items-center text-center p-4">
-          <Image src="/logout.png" alt="Logout" width={1024} height={1024} className="w-80 h-80 object-contain mb-5" />
+          <Image src="/logout.png" alt="Logout" width={1024} height={1024} className="w-60 h-60 object-contain mb-5" />
           <p className="text-xl font-semibold mb-2">Are you sure you want to logout?</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">You will need to log in again to access your account.</p>
           <div className="flex items-center justify-center gap-3 pt-2">

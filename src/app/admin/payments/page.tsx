@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { DatePicker, MonthPicker } from '@/components/ui/calendar'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
-import { DollarSign, Edit, Trash2, Plus, Calendar, User, Building, CreditCard } from 'lucide-react'
+import { DollarSign, Edit, Trash2, Plus, Calendar, User, Building, CreditCard, Printer } from 'lucide-react'
 import { useAlerts } from '@/components/ui/alerts'
 import { useAdminActions } from '@/components/admin/AdminContext'
 
@@ -48,10 +48,10 @@ interface Lease {
   rent_amount: string
   units: {
     unit_number: string
-  }[]
+  }
   users: {
     full_name: string
-  }[]
+  }
 }
 
 interface TenantOption {
@@ -67,8 +67,10 @@ export default function PaymentsManagement() {
   const [saving, setSaving] = useState(false)
   const [showFormModal, setShowFormModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showPrintModal, setShowPrintModal] = useState(false)
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null)
+  const [printingPayment, setPrintingPayment] = useState<Payment | null>(null)
   const [formData, setFormData] = useState<PaymentFormData>({
     tenant_id: '',
     lease_id: '',
@@ -135,7 +137,12 @@ export default function PaymentsManagement() {
       if (tenantsError) throw tenantsError
 
       setPayments(paymentsData || [])
-      setLeases((leasesData || []) as Lease[])
+      // Transform the leases data to match our interface
+      setLeases((leasesData || []).map(lease => ({
+        ...lease,
+        units: Array.isArray(lease.units) ? lease.units[0] : lease.units,
+        users: Array.isArray(lease.users) ? lease.users[0] : lease.users
+      })) as Lease[])
       setTenants((tenantsData || []) as TenantOption[])
 
       // Calculate stats
@@ -267,6 +274,11 @@ export default function PaymentsManagement() {
     }
   }
 
+  const handlePrint = (payment: Payment) => {
+    setPrintingPayment(payment)
+    setShowPrintModal(true)
+  }
+
   const closeModal = () => {
     setShowFormModal(false)
     setEditingPayment(null)
@@ -341,94 +353,120 @@ export default function PaymentsManagement() {
       {/* Quick action handled by header's QuickActions; remove local button */}
 
       {/* Payments List */}
-      <div className="space-y-4">
-        {payments.map((payment) => (
-          <Card key={payment.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 flex-1">
-                  <div>
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
-                      <User className="h-4 w-4 mr-1" />
-                      Tenant
-                    </div>
-                    <div className="font-medium">{payment.users.full_name}</div>
-                    <div className="text-sm text-gray-500">Unit {payment.leases.units.unit_number}</div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
-                      <DollarSign className="h-4 w-4 mr-1" />
-                      Amount
-                    </div>
-                    <div className="font-medium text-lg">${Number(payment.amount_paid).toLocaleString()}</div>
-                    <div className="text-sm text-gray-500">For: {new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Payment Date
-                    </div>
-                    <div className="font-medium">{new Date(payment.payment_date).toLocaleDateString()}</div>
-                    {payment.payment_method && (
-                      <div className="flex items-center text-sm text-gray-500">
-                        <CreditCard className="h-3 w-3 mr-1" />
-                        {payment.payment_method}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Records</CardTitle>
+          <CardDescription>All rent payment transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {payments.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center">
+                        <User className="h-4 w-4 mr-2" />
+                        Tenant
                       </div>
-                    )}
-                  </div>
-
-                  <div>
-                    {payment.notes && (
-                      <>
-                        <div className="text-sm text-gray-500 mb-1">Notes</div>
-                        <div className="text-sm">{payment.notes}</div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(payment)}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDeleteClick(payment)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {payments.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Payments Yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">Start logging rent payments from your tenants.</p>
-            <Button 
-              onClick={handleAddPayment}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Log Tenant Payment
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Amount
+                      </div>
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Payment Date
+                      </div>
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Notes</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((payment) => (
+                    <tr key={payment.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{payment.users.full_name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">Unit {payment.leases.units.unit_number}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-medium text-lg text-gray-900 dark:text-gray-100">${Number(payment.amount_paid).toLocaleString()}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">For: {new Date(payment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{new Date(payment.payment_date).toLocaleDateString()}</div>
+                          {payment.payment_method && (
+                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              {payment.payment_method}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
+                          {payment.notes || '—'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEdit(payment)}
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteClick(payment)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePrint(payment)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <Printer className="h-4 w-4 mr-1" />
+                            Print
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Payments Yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Start logging rent payments from your tenants.</p>
+              <Button 
+                onClick={handleAddPayment}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Log Tenant Payment
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add/Edit Payment Modal */}
       <Modal
@@ -452,11 +490,27 @@ export default function PaymentsManagement() {
               <Select
                 value={formData.tenant_id}
                 onChange={(value) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    tenant_id: value,
-                    lease_id: prev.lease_id && leases.find(l => l.id === parseInt(prev.lease_id))?.tenant_id === value ? prev.lease_id : ''
-                  }))
+                  const tenantLeases = leases.filter(l => l.tenant_id === value)
+                  
+                  setFormData(prev => {
+                    const newFormData = {
+                      ...prev,
+                      tenant_id: value,
+                      // Clear lease_id if current lease doesn't belong to new tenant
+                      lease_id: prev.lease_id && leases.find(l => l.id === parseInt(prev.lease_id))?.tenant_id === value ? prev.lease_id : ''
+                    }
+                    
+                    // Auto-prefill lease if tenant has exactly one active lease
+                    if (tenantLeases.length === 1) {
+                      newFormData.lease_id = tenantLeases[0].id.toString()
+                      // Also prefill the rent amount if not already set
+                      if (!newFormData.amount_paid) {
+                        newFormData.amount_paid = tenantLeases[0].rent_amount
+                      }
+                    }
+                    
+                    return newFormData
+                  })
                 }}
                 placeholder="Select a tenant"
                 required
@@ -504,7 +558,7 @@ export default function PaymentsManagement() {
               >
                 {filteredLeases.map((lease) => (
                   <option key={lease.id} value={lease.id}>
-                    {lease.users[0]?.full_name} - Unit {lease.units[0]?.unit_number} (${Number(lease.rent_amount).toLocaleString()})
+                    {`Unit ${lease.units.unit_number} ($${Number(lease.rent_amount).toLocaleString()})`}
                   </option>
                 ))}
               </Select>
@@ -590,6 +644,124 @@ export default function PaymentsManagement() {
         confirmText="Delete Payment"
         confirmVariant="destructive"
       />
+
+      {/* Print Receipt Modal */}
+      <Modal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        title={`Payment Receipt for ${printingPayment?.users.full_name}`}
+        size="lg"
+      >
+        <style jsx>{`
+          @media print {
+            @page {
+              margin: 0;
+              size: auto;
+              -webkit-print-color-adjust: exact;
+            }
+            body {
+              -webkit-print-color-adjust: exact;
+              margin: 0;
+              padding: 0;
+            }
+            * {
+              -webkit-print-color-adjust: exact;
+            }
+            .fixed.inset-0.z-\\[100\\] .px-6.py-4.border-b button {
+              display: none !important;
+            }
+            .flex.items-center.justify-between button {
+              display: none !important;
+            }
+            button.h-8.w-8.p-0 {
+              display: none !important;
+            }
+          }
+        `}</style>
+        <div className="p-6">
+          <div className="max-w-2xl mx-auto">
+            {/* Header for both screen and print */}
+            <div className="flex items-center justify-between mb-6 print:mb-8">
+              <div className="text-sm text-gray-600 dark:text-gray-400 print:text-black print:text-base">
+                {new Date().toLocaleDateString()} - {new Date().toLocaleTimeString()}
+              </div>
+              <div className="flex items-center gap-3">
+                <img 
+                  src="/ams.png" 
+                  alt="Logo" 
+                  className="h-8 w-8 print:h-10 print:w-10" 
+                />
+                <span className="text-lg font-semibold text-gray-800 dark:text-gray-200 print:text-black print:text-xl">
+                  Numa - Apartment MS
+                </span>
+              </div>
+            </div>
+            
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 print:text-black">Payment Receipt</h2>
+            </div>
+            
+            <div className="border-2 border-gray-800 dark:border-gray-300 print:border-black p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 print:text-black mb-4">Payment Details</h3>
+              
+              <div className="space-y-3">
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Tenant:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">{printingPayment?.users.full_name}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Unit:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">Unit {printingPayment?.leases.units.unit_number}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Amount Paid:</span>
+                  <span className="text-xl font-bold text-gray-800 dark:text-gray-200 print:text-black">${Number(printingPayment?.amount_paid).toLocaleString()}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Payment For:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">{printingPayment ? new Date(printingPayment.payment_for_month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : ''}</span>
+                </div>
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Payment Date:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">{printingPayment ? new Date(printingPayment.payment_date).toLocaleDateString() : ''}</span>
+                </div>
+                {printingPayment?.payment_method && (
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Payment Method:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">{printingPayment.payment_method}</span>
+                </div>
+                )}
+                {printingPayment?.notes && (
+                <div className="flex">
+                  <span className="font-semibold w-1/3 text-gray-800 dark:text-gray-200 print:text-black">Notes:</span>
+                  <span className="text-gray-800 dark:text-gray-200 print:text-black">{printingPayment.notes}</span>
+                </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="text-center text-gray-500 dark:text-gray-400 print:text-black text-xs print:text-sm">
+              <p>Receipt generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 print:hidden">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPrintModal(false)}
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={() => window.print()}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Printer className="h-4 w-4 mr-2" />
+              Print Receipt
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <div className="h-8"></div>
     </div>

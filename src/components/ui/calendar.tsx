@@ -65,7 +65,11 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(({ classNam
 
   const handleDateSelect = (day: number) => {
     const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), day)
-    const dateString = newDate.toISOString().split('T')[0]
+    // Format date as YYYY-MM-DD in local timezone to avoid timezone conversion issues
+    const year = newDate.getFullYear()
+    const month = String(newDate.getMonth() + 1).padStart(2, '0')
+    const dayStr = String(newDate.getDate()).padStart(2, '0')
+    const dateString = `${year}-${month}-${dayStr}`
     setSelectedDate(dateString)
     onChange?.(dateString)
     setIsOpen(false)
@@ -191,7 +195,17 @@ const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(({ classNam
         )}
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-          <Button type="button" variant="outline" size="sm" onClick={() => { const today = new Date().toISOString().split('T')[0]; setSelectedDate(today); onChange?.(today); setIsOpen(false); setMode('days') }}>
+          <Button type="button" variant="outline" size="sm" onClick={() => { 
+            const today = new Date()
+            const year = today.getFullYear()
+            const month = String(today.getMonth() + 1).padStart(2, '0')
+            const day = String(today.getDate()).padStart(2, '0')
+            const todayString = `${year}-${month}-${day}`
+            setSelectedDate(todayString)
+            onChange?.(todayString)
+            setIsOpen(false)
+            setMode('days')
+          }}>
             Today
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedDate(''); onChange?.(''); setIsOpen(false); setMode('days') }}>
