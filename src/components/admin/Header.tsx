@@ -452,7 +452,7 @@ function SearchBar() {
 
   const getResultIcon = (type: SearchResult['type']) => {
     switch (type) {
-      case 'page': return <Home className="h-4 w-4" />
+      case 'page': return <Search className="h-4 w-4" />
       case 'unit': return <Building className="h-4 w-4" />
       case 'tenant': return <Users className="h-4 w-4" />
       case 'lease': return <FileText className="h-4 w-4" />

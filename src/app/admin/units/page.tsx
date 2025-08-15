@@ -89,6 +89,19 @@ export default function UnitsManagement() {
 
     try {
       if (editingUnit) {
+        // Check if trying to set an occupied unit to vacant
+        if (editingUnit.status === 'occupied' && formData.status === 'vacant') {
+          show({ 
+            title: 'Invalid Status Change', 
+            description: 'Cannot set an occupied unit to vacant. Please move out the tenant first.', 
+            color: 'danger' 
+          })
+          setSaving(false)
+          setShowFormModal(false)
+          setEditingUnit(null)
+          return
+        }
+
         // Update existing unit
         const { error } = await supabase
           .from('units')
@@ -116,6 +129,9 @@ export default function UnitsManagement() {
     } catch (err: any) {
       console.error('Error saving unit:', err)
       show({ title: 'Error', description: err.message || 'Failed to save unit', color: 'danger' })
+      // Close modal on any error for better UX
+      setShowFormModal(false)
+      setEditingUnit(null)
     } finally {
       setSaving(false)
     }
