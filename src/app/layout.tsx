@@ -11,7 +11,7 @@ const poppins = Poppins({
 })
 
 export const metadata: Metadata = {
-  title: 'Apartment Management System',
+  title: 'Numa - Apartment MS',
   description: 'Modern apartment management system built with Next.js and Supabase',
 }
 

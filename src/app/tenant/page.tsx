@@ -985,7 +985,7 @@ export default function TenantDashboard() {
         hideHeader
       >
         <div className="flex flex-col items-center text-center p-4">
-          <Image src="/logout.png" alt="Logout" width={1536} height={1024} className="w-110 h-110 object-contain mb-5" />
+          <Image src="/logout.png" alt="Logout" width={1024} height={1024} className="w-80 h-80 object-contain mb-5" />
           <p className="text-xl font-semibold mb-2">Are you sure you want to logout?</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">You will need to log in again to access your account.</p>
           <div className="flex items-center justify-center gap-3 pt-2">
