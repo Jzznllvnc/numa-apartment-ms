@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Oleo_Script } from 'next/font/google'
+import PasswordInput from '@/components/PasswordInput'
 
 const oleoScript = Oleo_Script({
   subsets: ['latin'],
@@ -161,15 +162,14 @@ export default function Register() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your password (min. 6 characters)"
+                autoComplete="new-password"
               />
             </div>
 

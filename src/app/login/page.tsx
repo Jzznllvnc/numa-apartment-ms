@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Oleo_Script } from 'next/font/google'
+import { SessionManager } from '@/utils/sessionManager'
+import PasswordInput from '@/components/PasswordInput'
 
 const oleoScript = Oleo_Script({
   subsets: ['latin'],
@@ -21,6 +23,18 @@ export default function Login() {
   const router = useRouter()
   const supabase = createClient()
 
+  // Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = SessionManager.getRememberedEmail()
+    if (rememberedEmail) {
+      setEmail(rememberedEmail)
+      setRememberMe(true)
+    }
+    
+    // Initialize session management
+    SessionManager.initializeSessionManagement()
+  }, [])
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -33,6 +47,9 @@ export default function Login() {
         return
       }
 
+      // Handle remember me functionality
+      SessionManager.setRememberMe(email, rememberMe)
+
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -44,6 +61,11 @@ export default function Login() {
       }
 
       if (data.user) {
+        // Set up session cleanup if needed
+        if (!rememberMe) {
+          SessionManager.setupSessionCleanup()
+        }
+
         // Get user role to redirect to appropriate dashboard
         console.log('User authenticated, fetching role...')
         const { data: userData, error: userError } = await supabase
@@ -146,14 +168,13 @@ export default function Login() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your password"
+                autoComplete="current-password"
               />
             </div>
 
@@ -172,9 +193,9 @@ export default function Login() {
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                   Forgot Your Password?
-                </a>
+                </Link>
               </div>
             </div>
 

@@ -10,6 +10,7 @@ import { Users, Edit, Trash2, Plus, Mail, Phone, UserPlus, EllipsisVertical } fr
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
 import { getSignedAvatarUrl, getCachedAvatarUrl } from '@/utils/avatar'
+import PasswordInputUI from '@/components/PasswordInputUI'
 
 interface Tenant {
   id: string
@@ -319,12 +320,12 @@ export default function TenantsManagement() {
                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Password
                 </label>
-                <Input
-                  type="password"
-                  value={formData.password}
+                <PasswordInputUI
+                  value={formData.password || ''}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Enter temporary password"
                   required
+                  autoComplete="new-password"
                 />
               </div>
             )}
