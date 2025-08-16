@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User, ChatConversation } from '@/types/database';
 import { Users } from 'lucide-react';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 interface TenantListProps {
   onSelectConversation: (conversation: ChatConversation) => void;
@@ -160,7 +161,10 @@ const TenantList: React.FC<TenantListProps> = ({ onSelectConversation, currentUs
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        <LoadingAnimation 
+          size={60} 
+          message="" 
+        />
       </div>
     );
   }

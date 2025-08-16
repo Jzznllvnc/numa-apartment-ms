@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { LayoutPanelLeft, Save, User, Shield, Database } from 'lucide-react'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAlerts } from '@/components/ui/alerts'
 
 interface AdminProfile {
@@ -207,10 +208,10 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading settings...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading settings..." 
+        />
       </div>
     )
   }

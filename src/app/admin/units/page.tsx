@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Building, Edit, Trash2, HousePlus, Bed, Bath, Square, Upload, X, AlertCircle } from 'lucide-react'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { Unit } from '@/types/database'
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
@@ -418,10 +419,10 @@ export default function UnitsManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading units...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading units..." 
+        />
       </div>
     )
   }

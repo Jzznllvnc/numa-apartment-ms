@@ -10,6 +10,7 @@ import { DatePicker } from '@/components/ui/calendar'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { FileText, Edit, Trash2, Plus, Calendar, DollarSign, User, Building, FilePlus, FileMinus2 } from 'lucide-react'
 import { useAdminActions } from '@/components/admin/AdminContext'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAlerts } from '@/components/ui/alerts'
 
 interface Lease {
@@ -300,10 +301,10 @@ export default function LeasesManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading leases...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading leases..." 
+        />
       </div>
     )
   }

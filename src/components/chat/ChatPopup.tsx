@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client';
 import { User, ChatConversation } from '@/types/database';
 import TenantList from '@/components/chat/TenantList';
 import ChatConversationView from '@/components/chat/ChatConversationView';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import { MessageCircleMore, ArrowLeft, X } from 'lucide-react';
 
 interface ChatPopupProps {
@@ -213,7 +214,10 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
         <div className="flex-1 flex flex-col min-h-0">
           {view === 'loading' ? (
             <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              <LoadingAnimation 
+                size={60} 
+                message="" 
+              />
             </div>
           ) : view === 'conversation' && selectedConversation ? (
             <ChatConversationView

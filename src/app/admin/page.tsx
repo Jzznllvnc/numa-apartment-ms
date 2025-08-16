@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
 import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown } from 'lucide-react'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import clsx from 'clsx'
 
 interface DashboardStats {
@@ -24,22 +25,20 @@ interface DashboardStats {
   maintenanceLastMonth: number
 }
 
-// Sample data for charts
-const salesData = [
-  { name: 'Mon', value: 400 },
-  { name: 'Tue', value: 300 },
-  { name: 'Wed', value: 200 },
-  { name: 'Thu', value: 278 },
-  { name: 'Fri', value: 189 },
-  { name: 'Sat', value: 239 },
-  { name: 'Sun', value: 349 },
-]
+interface WeeklyActivityData {
+  name: string
+  newTenants: number
+  newLeases: number
+}
 
-const categoryData = [
-  { name: 'Rent Payments', value: 65, color: '#3b82f6' },
-  { name: 'Maintenance', value: 20, color: '#ef4444' },
-  { name: 'Utilities', value: 15, color: '#10b981' },
-]
+interface PropertyOverviewData {
+  name: string
+  value: number
+  count: number
+  color: string
+}
+
+// Real data will be fetched from database
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -58,6 +57,8 @@ export default function AdminDashboard() {
     maintenanceThisMonth: 0,
     maintenanceLastMonth: 0,
   })
+  const [weeklyActivityData, setWeeklyActivityData] = useState<WeeklyActivityData[]>([])
+  const [propertyOverviewData, setPropertyOverviewData] = useState<PropertyOverviewData[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -120,11 +121,11 @@ export default function AdminDashboard() {
       const paymentsThisMonth = (payments || []).filter(p => {
         const d = new Date((p as any).payment_for_month)
         return d >= currentMonthStart && d < nextMonthStart
-      }).reduce((sum, p: any) => sum + Number(p.amount_paid), 0)
+      }).reduce((sum, p: any) => sum + (parseFloat(p.amount_paid) || 0), 0)
       const paymentsLastMonth = (payments || []).filter(p => {
         const d = new Date((p as any).payment_for_month)
         return d >= lastMonthStart && d < currentMonthStart
-      }).reduce((sum, p: any) => sum + Number(p.amount_paid), 0)
+      }).reduce((sum, p: any) => sum + (parseFloat(p.amount_paid) || 0), 0)
 
       // Calculate monthly revenue from active leases
       const { data: leases, error: leasesError } = await supabase
@@ -134,7 +135,13 @@ export default function AdminDashboard() {
 
       if (leasesError) throw leasesError
 
-      const monthlyRevenue = leases?.reduce((sum, lease) => sum + Number(lease.rent_amount), 0) || 0
+      const monthlyRevenue = leases?.reduce((sum, lease) => sum + (parseFloat(lease.rent_amount) || 0), 0) || 0
+
+      // Fetch weekly activity data (last 7 days)
+      const weeklyData = await fetchWeeklyActivity()
+
+      // Fetch property overview data
+      const propertyData = await fetchPropertyOverview(totalUnits, occupiedUnits, vacantUnits, maintenanceUnits)
 
       setStats({
         totalUnits,
@@ -152,10 +159,171 @@ export default function AdminDashboard() {
         maintenanceThisMonth,
         maintenanceLastMonth,
       })
+
+      setWeeklyActivityData(weeklyData)
+      setPropertyOverviewData(propertyData)
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchWeeklyActivity = async (): Promise<WeeklyActivityData[]> => {
+    try {
+      const today = new Date()
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+      
+      // Set time to start and end of day for proper filtering
+      const startOfWeek = new Date(weekAgo)
+      startOfWeek.setHours(0, 0, 0, 0)
+      const endOfToday = new Date(today)
+      endOfToday.setHours(23, 59, 59, 999)
+      
+      // Get new tenants from last 7 days
+      const { data: weeklyTenants, error: tenantsError } = await supabase
+        .from('users')
+        .select('created_at')
+        .eq('role', 'tenant')
+        .gte('created_at', startOfWeek.toISOString())
+        .lte('created_at', endOfToday.toISOString())
+
+      // Get new leases from last 7 days
+      const { data: weeklyLeases, error: leasesError } = await supabase
+        .from('leases')
+        .select('created_at')
+        .gte('created_at', startOfWeek.toISOString())
+        .lte('created_at', endOfToday.toISOString())
+
+      if (tenantsError) {
+        console.error('Tenants query error:', tenantsError)
+        throw tenantsError
+      }
+      if (leasesError) {
+        console.error('Leases query error:', leasesError)
+        throw leasesError
+      }
+
+      // Initialize data for last 7 days
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      const weeklyData: WeeklyActivityData[] = []
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
+        const dayName = daysOfWeek[date.getDay()]
+        const dateStr = date.toISOString().split('T')[0]
+        
+        // Count new tenants for this day
+        const dailyTenants = (weeklyTenants || []).filter((tenant: any) => {
+          const tenantDate = new Date(tenant.created_at).toISOString().split('T')[0]
+          return tenantDate === dateStr
+        }).length
+
+        // Count new leases for this day
+        const dailyLeases = (weeklyLeases || []).filter((lease: any) => {
+          const leaseDate = new Date(lease.created_at).toISOString().split('T')[0]
+          return leaseDate === dateStr
+        }).length
+
+        weeklyData.push({
+          name: dayName,
+          newTenants: dailyTenants,
+          newLeases: dailyLeases
+        })
+      }
+
+      return weeklyData
+    } catch (error) {
+      console.error('Error fetching weekly activity:', error)
+      // Return empty data if there's an error
+      return [
+        { name: 'Sun', newTenants: 0, newLeases: 0 },
+        { name: 'Mon', newTenants: 0, newLeases: 0 },
+        { name: 'Tue', newTenants: 0, newLeases: 0 },
+        { name: 'Wed', newTenants: 0, newLeases: 0 },
+        { name: 'Thu', newTenants: 0, newLeases: 0 },
+        { name: 'Fri', newTenants: 0, newLeases: 0 },
+        { name: 'Sat', newTenants: 0, newLeases: 0 },
+      ]
+    }
+  }
+
+  const fetchPropertyOverview = async (totalUnits: number, occupiedUnits: number, vacantUnits: number, maintenanceUnits: number): Promise<PropertyOverviewData[]> => {
+    try {
+      // Get payment data for current month
+      const now = new Date()
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+      const { data: monthlyPayments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount_paid')
+        .gte('payment_date', currentMonthStart.toISOString().split('T')[0])
+        .lt('payment_date', nextMonthStart.toISOString().split('T')[0])
+
+      if (paymentsError) {
+        console.error('Payments query error:', paymentsError)
+      }
+
+      const totalPayments = (monthlyPayments || []).reduce((sum, payment: any) => sum + parseFloat(payment.amount_paid), 0)
+      const paymentCount = (monthlyPayments || []).length
+
+      const propertyOverview: PropertyOverviewData[] = []
+
+      // UNITS SECTION - Unit status breakdown
+      if (occupiedUnits > 0) {
+        propertyOverview.push({
+          name: 'Occupied Units',
+          value: Math.round((occupiedUnits / totalUnits) * 100),
+          count: occupiedUnits,
+          color: '#3b82f6'
+        })
+      }
+
+      if (vacantUnits > 0) {
+        propertyOverview.push({
+          name: 'Vacant Units',
+          value: Math.round((vacantUnits / totalUnits) * 100),
+          count: vacantUnits,
+          color: '#3b82f6'
+        })
+      }
+
+      if (maintenanceUnits > 0) {
+        propertyOverview.push({
+          name: 'Under Maintenance',
+          value: Math.round((maintenanceUnits / totalUnits) * 100),
+          count: maintenanceUnits,
+          color: '#ef4444'
+        })
+      }
+
+      // PAYMENTS SECTION - Payment data (separate from units)
+      if (paymentCount > 0) {
+        propertyOverview.push({
+          name: 'Payments Received',
+          value: 25, // Fixed percentage to show as separate section
+          count: paymentCount,
+          color: '#8b5cf6'
+        })
+      }
+
+      if (occupiedUnits - paymentCount > 0) {
+        propertyOverview.push({
+          name: 'Outstanding Payments',
+          value: 15, // Fixed percentage to show as separate section
+          count: occupiedUnits - paymentCount,
+          color: '#f59e0b'
+        })
+      }
+
+      return propertyOverview
+    } catch (error) {
+      console.error('Error fetching property overview:', error)
+      // Return default data if there's an error
+      return [
+        { name: 'No Data', value: 100, count: 0, color: '#64748b' }
+      ]
     }
   }
 
@@ -164,10 +332,10 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading dashboard..." 
+        />
       </div>
     )
   }
@@ -272,27 +440,41 @@ export default function AdminDashboard() {
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Bar Chart */}
+        {/* Area Chart with Gradient */}
         <Card>
           <CardHeader>
-            <CardTitle>Weekly Activity</CardTitle>
-            <CardDescription>LAST WEEK</CardDescription>
+            <CardTitle>New Tenants & Leases</CardTitle>
+            <CardDescription>LAST 7 DAYS</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesData}>
+          <CardContent className="px-2 sm:px-6">
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={weeklyActivityData} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="tenantsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="leasesGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                  </linearGradient>
+                </defs>
+
                 <XAxis 
                   dataKey="name" 
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: '#64748b' }}
+                  tickMargin={8}
                 />
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 12, fill: '#64748b' }}
+                  width={30}
                 />
                 <Tooltip 
+                  cursor={false}
                   contentStyle={{
                     backgroundColor: 'white',
                     border: '1px solid #e2e8f0',
@@ -300,55 +482,85 @@ export default function AdminDashboard() {
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   }}
                 />
-                <Line 
+                <Area 
                   type="monotone" 
-                  dataKey="value" 
+                  dataKey="newLeases" 
                   stroke="#3b82f6" 
+                  fill="url(#leasesGradient)"
                   strokeWidth={2}
-                  dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2, fill: '#ffffff' }}
+                  fillOpacity={0.2}
+                  connectNulls={true}
                 />
-              </LineChart>
+                <Area 
+                  type="monotone" 
+                  dataKey="newTenants" 
+                  stroke="#10b981" 
+                  fill="url(#tenantsGradient)"
+                  strokeWidth={2}
+                  fillOpacity={0.3}
+                  connectNulls={true}
+                />
+              </AreaChart>
             </ResponsiveContainer>
+            <div className="flex items-center justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-300">New Tenants</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-300">New Leases</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Pie Chart */}
+        {/* Property Overview Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenue Breakdown</CardTitle>
-            <CardDescription>CURRENT MONTH</CardDescription>
+            <CardTitle>Property Overview</CardTitle>
+            <CardDescription>UNITS & PAYMENTS STATUS</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="relative h-64">
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+          <CardContent className="px-2 sm:px-6">
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 mt-6">
+              {/* Pie Chart - responsive size */}
+              <div className="flex justify-center items-center flex-shrink-0 w-full max-w-xs">
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={propertyOverviewData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {propertyOverviewData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value, name, props) => [
+                        `${props.payload?.count || value}`,
+                        name
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
               
-              {/* Legend positioned at bottom right */}
-              <div className="absolute bottom-0 right-0 space-y-1">
-                {categoryData.map((item, index) => (
-                  <div key={index} className="flex items-center">
+              {/* Legends - responsive layout */}
+              <div className="flex flex-col justify-center gap-3 w-full lg:w-auto">
+                {propertyOverviewData.map((item, index) => (
+                  <div key={index} className="flex items-center gap-3 justify-center lg:justify-start">
                     <div 
-                      className="w-3 h-3 rounded-full mr-2" 
+                      className="w-3 h-3 rounded-full flex-shrink-0" 
                       style={{ backgroundColor: item.color }}
                     ></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{item.name} ({item.value}%)</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
+                      {item.name} ({item.value}%)
+                    </span>
                   </div>
                 ))}
               </div>

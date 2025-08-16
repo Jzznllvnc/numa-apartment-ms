@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User, ChatConversation, ChatMessage } from '@/types/database';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import { Send } from 'lucide-react';
 
 interface ChatConversationViewProps {
@@ -226,7 +227,10 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        <LoadingAnimation 
+          size={60} 
+          message="" 
+        />
       </div>
     );
   }

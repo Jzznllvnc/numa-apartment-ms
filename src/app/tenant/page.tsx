@@ -15,7 +15,7 @@ import { Modal } from '@/components/ui/modal'
 import { useAlerts } from '@/components/ui/alerts'
 import { Oleo_Script } from 'next/font/google'
 import ChatSystem from '@/components/chat/ChatSystem'
-
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 const oleo = Oleo_Script({ subsets: ['latin'], weight: '400' })
 
 // Hoisted components to keep stable identity and avoid state resets
@@ -692,11 +692,11 @@ export default function TenantDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading your dashboard...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <LoadingAnimation 
+          size={150} 
+          message="Loading your dashboard..." 
+        />
       </div>
     )
   }

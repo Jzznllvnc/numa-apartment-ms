@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
 import { Wrench, Edit, Trash2, Plus, Calendar, User, Building, AlertCircle, CheckCircle, Hammer } from 'lucide-react'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
 
@@ -326,10 +327,10 @@ export default function MaintenanceManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading maintenance requests...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading maintenance requests..." 
+        />
       </div>
     )
   }

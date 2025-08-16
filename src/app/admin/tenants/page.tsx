@@ -10,6 +10,7 @@ import { Users, Edit, Trash2, Plus, Mail, Phone, UserPlus, EllipsisVertical } fr
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
 import { getSignedAvatarUrl, getCachedAvatarUrl } from '@/utils/avatar'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import PasswordInputUI from '@/components/PasswordInputUI'
 
 interface Tenant {
@@ -193,10 +194,10 @@ export default function TenantsManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading tenants...</p>
-        </div>
+        <LoadingAnimation 
+          size={150} 
+          message="Loading tenants..." 
+        />
       </div>
     )
   }

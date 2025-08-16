@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Oleo_Script } from 'next/font/google'
 import PasswordInput from '@/components/PasswordInput'
+import LoadingAnimation from '@/components/ui/LoadingAnimation'
 
 const oleoScript = Oleo_Script({
   subsets: ['latin'],
@@ -118,10 +119,10 @@ export default function ResetPassword() {
   if (checking) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Verifying reset link...</p>
-        </div>
+        <LoadingAnimation 
+          size={120} 
+          message="Verifying reset link..." 
+        />
       </div>
     )
   }
