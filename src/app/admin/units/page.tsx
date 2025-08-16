@@ -463,7 +463,7 @@ export default function UnitsManagement() {
 
       {/* Units Grid - New Design */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {units.map((unit) => (
+        {units.map((unit, index) => (
           <UnitCard 
             key={unit.id} 
             unit={unit} 
@@ -471,6 +471,7 @@ export default function UnitsManagement() {
             onDelete={handleDeleteClick}
             getStatusColor={getStatusColor}
             getSignedImageUrl={getSignedImageUrl}
+            index={index}
           />
         ))}
       </div>
@@ -667,6 +668,7 @@ export default function UnitsManagement() {
                           src={imagePreview}
                           alt="Current unit image"
                           fill
+                          sizes="40px"
                           className="object-cover"
                         />
                       </div>
@@ -759,13 +761,15 @@ function UnitCard({
   onEdit, 
   onDelete, 
   getStatusColor, 
-  getSignedImageUrl 
+  getSignedImageUrl,
+  index = 0
 }: { 
   unit: Unit
   onEdit: (unit: Unit) => void
   onDelete: (unit: Unit) => void
   getStatusColor: (status: string) => string
   getSignedImageUrl: (path: string) => Promise<string>
+  index?: number
 }) {
   const [imageUrl, setImageUrl] = useState<string>('/placeholder-unit.svg')
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -791,6 +795,8 @@ function UnitCard({
             src={imageUrl}
             alt={`Unit ${unit.unit_number}`}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={index < 2}
             className="object-cover"
             onError={() => setImageUrl('/placeholder-unit.svg')}
           />
