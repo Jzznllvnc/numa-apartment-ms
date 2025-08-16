@@ -57,14 +57,18 @@ export function Modal({ isOpen, onClose, title, description, children, size = 'm
 
   return createPortal(
     <div className="fixed inset-0 z-[100] overflow-y-auto">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+      {/* Backdrop with blur */}
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-md transition-all duration-300 animate-modal-backdrop" 
+        onClick={onClose} 
+        style={{ backdropFilter: 'blur(8px)' }}
+      />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           ref={modalRef}
-          className={`relative bg-white dark:bg-[#111827] rounded-lg shadow-xl transform transition-all w-full max-w-[calc(100vw-2rem)] ${sizeClasses[size]} overflow-hidden flex flex-col`}
+          className={`relative bg-white dark:bg-[#111827] rounded-lg shadow-xl transform w-full max-w-[calc(100vw-2rem)] ${sizeClasses[size]} overflow-hidden flex flex-col animate-modal-slide-up`}
         >
           {/* Header */}
           {!hideHeader && (

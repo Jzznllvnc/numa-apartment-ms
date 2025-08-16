@@ -25,6 +25,18 @@ interface DashboardStats {
   maintenanceLastMonth: number
 }
 
+interface RecentPayment {
+  id: string
+  lease_id: string
+  tenant_id: string
+  amount_paid: string
+  payment_date: string
+  payment_method: string
+  status: string
+  tenant_name?: string
+  unit_number?: string
+}
+
 interface WeeklyActivityData {
   name: string
   newTenants: number
@@ -59,6 +71,7 @@ export default function AdminDashboard() {
   })
   const [weeklyActivityData, setWeeklyActivityData] = useState<WeeklyActivityData[]>([])
   const [propertyOverviewData, setPropertyOverviewData] = useState<PropertyOverviewData[]>([])
+  const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -143,6 +156,9 @@ export default function AdminDashboard() {
       // Fetch property overview data
       const propertyData = await fetchPropertyOverview(totalUnits, occupiedUnits, vacantUnits, maintenanceUnits)
 
+      // Fetch recent payments data
+      const recentPaymentsData = await fetchRecentPayments()
+
       setStats({
         totalUnits,
         occupiedUnits,
@@ -162,6 +178,7 @@ export default function AdminDashboard() {
 
       setWeeklyActivityData(weeklyData)
       setPropertyOverviewData(propertyData)
+      setRecentPayments(recentPaymentsData)
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)
     } finally {
@@ -327,6 +344,75 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchRecentPayments = async (): Promise<RecentPayment[]> => {
+    try {
+      // First, get recent payments
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .order('payment_date', { ascending: false })
+        .limit(10)
+
+      if (paymentsError) {
+        console.error('Recent payments query error:', paymentsError)
+        return []
+      }
+
+      if (!payments || payments.length === 0) {
+        return []
+      }
+
+      // Get tenant names for these payments
+      const tenantIds = [...new Set(payments.map(p => p.tenant_id).filter(Boolean))]
+      const { data: tenants } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .in('id', tenantIds)
+
+      // Get leases to connect payments to units
+      const leaseIds = [...new Set(payments.map(p => p.lease_id).filter(Boolean))]
+      const { data: leases } = await supabase
+        .from('leases')
+        .select('id, unit_id')
+        .in('id', leaseIds)
+
+      // Get unit numbers using unit_ids from leases
+      const unitIds = [...new Set((leases || []).map(l => l.unit_id).filter(Boolean))]
+      const { data: units } = await supabase
+        .from('units')
+        .select('id, unit_number')
+        .in('id', unitIds)
+
+      // Create lookup maps
+      const tenantMap = new Map((tenants || []).map(t => [t.id, t.full_name]))
+      const leaseToUnitMap = new Map((leases || []).map(l => [l.id, l.unit_id]))
+      const unitMap = new Map((units || []).map(u => [u.id, u.unit_number]))
+
+      // Transform the data to include tenant_name and unit_number
+      const transformedPayments = payments.map((payment: any) => {
+        const unitId = leaseToUnitMap.get(payment.lease_id)
+        const unitNumber = unitId ? unitMap.get(unitId) : null
+        
+        return {
+          id: payment.id,
+          lease_id: payment.lease_id,
+          tenant_id: payment.tenant_id,
+          amount_paid: payment.amount_paid,
+          payment_date: payment.payment_date,
+          payment_method: payment.payment_method || 'Bank Transfer',
+          status: payment.status || 'completed',
+          tenant_name: tenantMap.get(payment.tenant_id) || 'Unknown Tenant',
+          unit_number: unitNumber || 'No Unit Assigned'
+        }
+      })
+
+      return transformedPayments
+    } catch (error) {
+      console.error('Error fetching recent payments:', error)
+      return []
+    }
+  }
+
   const occupancyRate = stats.totalUnits > 0 ? (stats.occupiedUnits / stats.totalUnits) * 100 : 0
 
   if (loading) {
@@ -358,8 +444,17 @@ export default function AdminDashboard() {
             {(() => {
               const last = stats.revenueLastMonth
               const curr = stats.revenueThisMonth
-              const up = last === 0 ? curr > 0 : curr >= last
-              const pct = last === 0 ? 100 : Math.abs(((curr - last) / last) * 100)
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+              }
+              if (last === 0 && curr > 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↑ 100%</span>
+              }
+              if (last > 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↓ 100%</span>
+              }
+              const up = curr >= last
+              const pct = Math.abs(((curr - last) / last) * 100)
               return (
                 <span className={clsx('text-xs px-2 py-1 rounded-full self-center', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {up ? '↑' : '↓'} {pct.toFixed(1)}%
@@ -383,8 +478,17 @@ export default function AdminDashboard() {
             {(() => {
               const last = stats.newTenantsLastMonth
               const curr = stats.newTenantsThisMonth
-              const up = last === 0 ? curr > 0 : curr >= last
-              const pct = last === 0 ? 100 : Math.abs(((curr - last) / last) * 100)
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+              }
+              if (last === 0 && curr > 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↑ 100%</span>
+              }
+              if (last > 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↓ 100%</span>
+              }
+              const up = curr >= last
+              const pct = Math.abs(((curr - last) / last) * 100)
               return (
                 <span className={clsx('text-xs px-2 py-1 rounded-full self-center', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {up ? '↑' : '↓'} {pct.toFixed(1)}%
@@ -408,12 +512,23 @@ export default function AdminDashboard() {
             {(() => {
               const last = stats.maintenanceLastMonth
               const curr = stats.maintenanceThisMonth
-              // For requests, down is good
-              const up = curr <= last
-              const pct = last === 0 ? 100 : Math.abs(((curr - last) / last) * 100)
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+              }
+              if (last === 0 && curr > 0) {
+                // For maintenance requests, increase from 0 is bad (red)
+                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↑ 100%</span>
+              }
+              if (last > 0 && curr === 0) {
+                // For maintenance requests, decrease to 0 is good (green)
+                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↓ 100%</span>
+              }
+              // For maintenance requests, fewer is better
+              const fewer = curr <= last
+              const pct = Math.abs(((curr - last) / last) * 100)
               return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full self-center', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                  {up ? '↓' : '↑'} {pct.toFixed(1)}%
+                <span className={clsx('text-xs px-2 py-1 rounded-full self-center', fewer ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                  {curr > last ? '↑' : '↓'} {pct.toFixed(1)}%
                 </span>
               )
             })()}
@@ -569,57 +684,63 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Payments */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Invoices</CardTitle>
+          <CardTitle>Recent Payments</CardTitle>
+          <CardDescription>Latest payment transactions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">NO</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">ID CUSTOMER</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">CUSTOMER NAME</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">CUSTOMER ADDRESS</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">DATE</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">TYPE</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">STATUS</th>
-                  <th className="text-left p-2 text-sm font-medium text-gray-500">AMOUNT</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="p-2 text-sm">01</td>
-                  <td className="p-2 text-sm">#065499</td>
-                  <td className="p-2 text-sm">Aurelien Salomon</td>
-                  <td className="p-2 text-sm">089 Kutch Green Apt. 448</td>
-                  <td className="p-2 text-sm">04 Sep 2019</td>
-                  <td className="p-2 text-sm">Electric</td>
-                  <td className="p-2 text-sm">
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                      Completed
-                    </span>
-                  </td>
-                  <td className="p-2 text-sm">$100</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 text-sm">02</td>
-                  <td className="p-2 text-sm">#065455</td>
-                  <td className="p-2 text-sm">Manuel Rovira</td>
-                  <td className="p-2 text-sm">089 Kutch Green Apt. 448</td>
-                  <td className="p-2 text-sm">04 Sep 2019</td>
-                  <td className="p-2 text-sm">Clothing</td>
-                  <td className="p-2 text-sm">
-                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
-                      Rejected
-                    </span>
-                  </td>
-                  <td className="p-2 text-sm">$200</td>
-                </tr>
-              </tbody>
-            </table>
+            {recentPayments.length === 0 ? (
+              <div className="text-center py-8">
+                <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Payments Yet</h3>
+                <p className="text-gray-500 dark:text-gray-400">Payment transactions will appear here once tenants start making payments.</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">NO</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">PAYMENT ID</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">TENANT NAME</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">UNIT NUMBER</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">DATE</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">METHOD</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">STATUS</th>
+                    <th className="text-left p-2 text-sm font-medium text-gray-500">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPayments.map((payment, index) => (
+                    <tr key={payment.id} className="border-b">
+                      <td className="p-2 text-sm">{String(index + 1).padStart(2, '0')}</td>
+                      <td className="p-2 text-sm">#{String(payment.id).slice(0, 8)}</td>
+                      <td className="p-2 text-sm">{payment.tenant_name}</td>
+                      <td className="p-2 text-sm">{
+                        payment.unit_number === 'No Unit Assigned' 
+                          ? payment.unit_number 
+                          : `Unit ${payment.unit_number}`
+                      }</td>
+                      <td className="p-2 text-sm">{new Date(payment.payment_date).toLocaleDateString()}</td>
+                      <td className="p-2 text-sm">{payment.payment_method}</td>
+                      <td className="p-2 text-sm">
+                        <span className={clsx('px-2 py-1 rounded-full text-xs', {
+                          'bg-green-100 text-green-800': payment.status === 'completed',
+                          'bg-yellow-100 text-yellow-800': payment.status === 'pending',
+                          'bg-red-100 text-red-800': payment.status === 'failed' || payment.status === 'rejected',
+                          'bg-blue-100 text-blue-800': payment.status === 'processing'
+                        })}>
+                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="p-2 text-sm">${parseFloat(payment.amount_paid || '0').toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
       </Card>
