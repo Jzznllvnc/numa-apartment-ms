@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Modal } from '@/components/ui/modal'
 import { useAlerts } from '@/components/ui/alerts'
 import { Oleo_Script } from 'next/font/google'
+import ChatSystem from '@/components/chat/ChatSystem'
 
 const oleo = Oleo_Script({ subsets: ['latin'], weight: '400' })
 
@@ -53,7 +54,7 @@ function NotificationButton() {
   const supabase = createClient()
   const [hasNotifications, setHasNotifications] = useState(false)
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<Array<{ id: number | string; title: string; subtitle: string; createdAt: string; type: 'unit' | 'announcement' }>>([])
+  const [items, setItems] = useState<Array<{ id: number | string; title: string; subtitle: string; createdAt: string; type: 'unit' | 'announcement' | 'chat' }>>([])
   const [clearedAfter, setClearedAfter] = useState<number>(() => {
     if (typeof window === 'undefined') return 0
     const v = localStorage.getItem('tenantNotifClearedAt')
@@ -74,22 +75,32 @@ function NotificationButton() {
   useEffect(() => {
     const fetchRecent = async () => {
       try {
-        const { data: announcements } = await supabase
-          .from('announcements')
-          .select('id, title, content, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5)
+        const currentUser = await supabase.auth.getUser()
+        
+        const [announcementsResponse, unitsResponse, chatResponse] = await Promise.all([
+          supabase
+            .from('announcements')
+            .select('id, title, content, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('units')
+            .select('id, unit_number, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('chat_messages')
+            .select('id, message_text, created_at, sender_id')
+            .neq('sender_id', currentUser.data.user?.id || '')
+            .order('created_at', { ascending: false })
+            .limit(5)
+        ])
 
-        const { data: units } = await supabase
-          .from('units')
-          .select('id, unit_number, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5)
-
-        const notificationItems: Array<{ id: string; title: string; subtitle: string; createdAt: string; type: 'unit' | 'announcement' }> = []
-        if (announcements) {
+        const notificationItems: Array<{ id: string; title: string; subtitle: string; createdAt: string; type: 'unit' | 'announcement' | 'chat' }> = []
+        
+        if (announcementsResponse.data) {
           notificationItems.push(
-            ...announcements.map((a: any) => ({
+            ...announcementsResponse.data.map((a: any) => ({
               id: `announcement-${a.id}`,
               title: 'New Announcement',
               subtitle: a.title,
@@ -98,14 +109,27 @@ function NotificationButton() {
             }))
           )
         }
-        if (units) {
+        
+        if (unitsResponse.data) {
           notificationItems.push(
-            ...units.map((u: any) => ({
+            ...unitsResponse.data.map((u: any) => ({
               id: `unit-${u.id}`,
               title: 'New Unit Available',
               subtitle: `Unit ${u.unit_number} has been added`,
               createdAt: u.created_at,
               type: 'unit' as const,
+            }))
+          )
+        }
+
+        if (chatResponse.data) {
+          notificationItems.push(
+            ...chatResponse.data.map((m: any) => ({
+              id: `chat-${m.id}`,
+              title: 'New message from Admin',
+              subtitle: 'You have a new message',
+              createdAt: m.created_at,
+              type: 'chat' as const,
             }))
           )
         }
@@ -161,9 +185,32 @@ function NotificationButton() {
       })
       .subscribe()
 
+    const chatChannel = supabase
+      .channel('tenant-chat-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        const m: any = payload.new
+        const currentUser = (await supabase.auth.getUser()).data.user
+        
+        // Only show notifications for messages not sent by current user (i.e., from admin)
+        if (m.sender_id !== currentUser?.id) {
+          const newItem = {
+            id: `chat-${m.id}`,
+            title: 'New message from Admin',
+            subtitle: 'You have a new message',
+            createdAt: m.created_at as string,
+            type: 'chat' as const,
+          }
+          setItems((prev) => [newItem, ...prev].slice(0, 8))
+          const createdMs = new Date(newItem.createdAt).getTime()
+          if (createdMs > thresholdRef.current) setHasNotifications(true)
+        }
+      })
+      .subscribe()
+
     return () => {
       supabase.removeChannel(announcementChannel)
       supabase.removeChannel(unitChannel)
+      supabase.removeChannel(chatChannel)
     }
   }, [clearedAfter, seenAfter])
 
@@ -1109,6 +1156,9 @@ export default function TenantDashboard() {
           </div>
         </div>
       </Modal>
+
+      {/* Chat System */}
+      <ChatSystem />
     </div>
   )
 }

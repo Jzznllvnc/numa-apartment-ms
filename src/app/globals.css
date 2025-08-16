@@ -130,4 +130,10 @@
   .dark * {
     scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
   }
+
+  /* Chat notification progress bar animation */
+  @keyframes shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
 }

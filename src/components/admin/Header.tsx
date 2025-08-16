@@ -124,7 +124,7 @@ function ThemeToggle() {
 function NotificationButton() {
   const [hasNotifications, setHasNotifications] = useState(false)
   const [open, setOpen] = useState(false)
-  const [items, setItems] = useState<Array<{ id: number | string; title: string; subtitle: string; createdAt: string }>>([])
+  const [items, setItems] = useState<Array<{ id: number | string; title: string; subtitle: string; createdAt: string; type: 'maintenance' | 'chat' }>>([])
   const [clearedAfter, setClearedAfter] = useState<number>(() => {
     if (typeof window === 'undefined') return 0
     const v = localStorage.getItem('adminNotifClearedAt')
@@ -141,42 +141,76 @@ function NotificationButton() {
   useEffect(() => {
     const supabase = createClient()
 
-    // Initial fetch of recent maintenance requests
+    // Initial fetch of recent maintenance requests and chat messages
     const fetchRecent = async () => {
-      const { data } = await supabase
-        .from('maintenance_requests')
-        .select('id, request_details, date_submitted')
-        .order('date_submitted', { ascending: false })
-        .limit(5)
-      if (data) {
-        const mapped = data.map((r: any) => ({
-          id: r.id,
+      const [maintenanceResponse, chatResponse] = await Promise.all([
+        supabase
+          .from('maintenance_requests')
+          .select('id, request_details, date_submitted')
+          .order('date_submitted', { ascending: false })
+          .limit(5),
+        supabase
+          .from('chat_messages')
+          .select(`
+            id, message_text, created_at, sender_id,
+            conversation:chat_conversations(tenant:users!chat_conversations_tenant_id_fkey(full_name))
+          `)
+          .neq('sender_id', (await supabase.auth.getUser()).data.user?.id || '')
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ])
+
+      const allItems: Array<{ id: number | string; title: string; subtitle: string; createdAt: string; type: 'maintenance' | 'chat' }> = []
+
+      if (maintenanceResponse.data) {
+        const maintenanceItems = maintenanceResponse.data.map((r: any) => ({
+          id: `maintenance-${r.id}`,
           title: 'New maintenance request',
           subtitle: r.request_details,
           createdAt: r.date_submitted,
+          type: 'maintenance' as const,
         }))
-        // Filter out anything cleared previously (Clear removes from list)
-        const filtered = mapped.filter((n) => new Date(n.createdAt).getTime() > clearedAfter)
-        setItems(filtered)
-        // Use the freshest seen timestamp (from state or localStorage) to avoid flicker
-        const seenFromStorage = typeof window !== 'undefined' ? parseInt(localStorage.getItem('adminNotifSeenAt') || '0', 10) : 0
-        const threshold = Math.max(clearedAfter, seenAfter, isNaN(seenFromStorage) ? 0 : seenFromStorage)
-        const hasUnseen = filtered.some((n) => new Date(n.createdAt).getTime() > threshold)
-        setHasNotifications(hasUnseen)
+        allItems.push(...maintenanceItems)
       }
+
+      if (chatResponse.data) {
+        const chatItems = chatResponse.data.map((m: any) => ({
+          id: `chat-${m.id}`,
+          title: `New message from ${m.conversation?.tenant?.full_name || 'Tenant'}`,
+          subtitle: 'You have a new message',
+          createdAt: m.created_at,
+          type: 'chat' as const,
+        }))
+        allItems.push(...chatItems)
+      }
+
+      // Sort by creation time and filter cleared items
+      const sortedItems = allItems
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .filter((n) => new Date(n.createdAt).getTime() > clearedAfter)
+        .slice(0, 8)
+
+      setItems(sortedItems)
+      
+      // Check for unseen items
+      const seenFromStorage = typeof window !== 'undefined' ? parseInt(localStorage.getItem('adminNotifSeenAt') || '0', 10) : 0
+      const threshold = Math.max(clearedAfter, seenAfter, isNaN(seenFromStorage) ? 0 : seenFromStorage)
+      const hasUnseen = sortedItems.some((n) => new Date(n.createdAt).getTime() > threshold)
+      setHasNotifications(hasUnseen)
     }
     fetchRecent()
 
-    // Realtime subscription for new requests
-    const channel = supabase
-      .channel('maintenance-requests')
+    // Realtime subscriptions for new requests and chat messages
+    const maintenanceChannel = supabase
+      .channel('admin-maintenance-notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'maintenance_requests' }, (payload) => {
         const r: any = payload.new
         const newItem = {
-          id: r.id,
+          id: `maintenance-${r.id}`,
           title: 'New maintenance request',
           subtitle: r.request_details,
           createdAt: r.date_submitted as string,
+          type: 'maintenance' as const,
         }
         setItems((prev) => [newItem, ...prev].slice(0, 8))
         const createdMs = new Date(newItem.createdAt).getTime()
@@ -186,8 +220,40 @@ function NotificationButton() {
       })
       .subscribe()
 
+    const chatChannel = supabase
+      .channel('admin-chat-notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        const m: any = payload.new
+        const currentUser = (await supabase.auth.getUser()).data.user
+        
+        // Only show notifications for messages not sent by current user
+        if (m.sender_id !== currentUser?.id) {
+          // Get tenant name for the notification
+          const { data: conversation } = await supabase
+            .from('chat_conversations')
+            .select('tenant:users!chat_conversations_tenant_id_fkey(full_name)')
+            .eq('id', m.conversation_id)
+            .single()
+
+          const newItem = {
+            id: `chat-${m.id}`,
+            title: `New message from ${conversation?.tenant?.full_name || 'Tenant'}`,
+            subtitle: 'You have a new message',
+            createdAt: m.created_at as string,
+            type: 'chat' as const,
+          }
+          setItems((prev) => [newItem, ...prev].slice(0, 8))
+          const createdMs = new Date(newItem.createdAt).getTime()
+          if (createdMs > thresholdRef.current) {
+            setHasNotifications(true)
+          }
+        }
+      })
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(maintenanceChannel)
+      supabase.removeChannel(chatChannel)
     }
   }, [clearedAfter, seenAfter])
 
@@ -263,7 +329,11 @@ function NotificationButton() {
               <div className="p-4 text-sm text-gray-500 dark:text-gray-400">No notifications</div>
             ) : (
               items.map((n) => (
-                <a key={n.id} href="/admin/maintenance" className="flex flex-col px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <a 
+                  key={n.id} 
+                  href={n.type === 'maintenance' ? "/admin/maintenance" : "#"} 
+                  className="flex flex-col px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
                   <div className="text-sm text-gray-900 dark:text-gray-100">{n.title}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{n.subtitle}</div>
                   <div className="text-[11px] text-gray-400">{new Date(n.createdAt).toLocaleString()}</div>

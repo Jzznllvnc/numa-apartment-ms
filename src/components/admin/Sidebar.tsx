@@ -23,6 +23,7 @@ import {
 import { AdminHeader } from './Header'
 import { AdminProvider } from './AdminContext'
 import { ContentWrapper } from './ContentWrapper'
+import ChatSystem from '@/components/chat/ChatSystem'
 
 const oleo = Oleo_Script({ subsets: ['latin'], weight: '400' })
 
@@ -229,6 +230,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
           </ContentWrapper>
         </div>
       </div>
+      {/* Chat System */}
+      <ChatSystem />
     </div>
   )
 }

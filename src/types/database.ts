@@ -82,3 +82,30 @@ export interface Announcement {
   // Relations
   author?: User;
 }
+
+export interface ChatConversation {
+  id: number;
+  tenant_id: string;
+  admin_id: string | null;
+  last_message_at: string;
+  tenant_unread_count: number;
+  admin_unread_count: number;
+  created_at: string;
+  updated_at: string;
+  // Relations
+  tenant?: User;
+  admin?: User;
+  latest_message?: ChatMessage;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversation_id: number;
+  sender_id: string;
+  message_text: string;
+  is_read: boolean;
+  created_at: string;
+  // Relations
+  sender?: User;
+  conversation?: ChatConversation;
+}
