@@ -129,27 +129,21 @@ export default function ForgotPassword() {
       </div>
 
       {/* Right Side - Hero Image */}
-      <div className="hidden lg:block relative flex-1 bg-gradient-to-br from-blue-600 to-purple-700 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0">
-        <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-6">
-          <div className="max-w-md text-center space-y-4">
-            <h2 className="text-4xl font-bold">
-              Secure Password Recovery
-            </h2>
-            <p className="text-base opacity-90">
-              We&apos;ll help you regain access to your apartment management dashboard safely and securely.
-            </p>
-            <div className="mt-6 bg-white/10 rounded-lg p-4 flex items-center justify-center aspect-video">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3.586l4.293-4.293A6 6 0 0115 7z" />
-                  </svg>
-                </div>
-                <p className="text-white/70">Secure Recovery Process</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-blue-600 to-purple-700 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0 flex-col justify-center items-center text-white p-6">
+        <h2 className="text-4xl font-bold mb-4 max-w-lg text-center opacity-0 animate-slide-up-delay-1">
+          Secure Password Recovery
+        </h2>
+        <p className="text-base mb-12 max-w-lg text-center opacity-0 animate-slide-up-delay-2">
+          We&apos;ll help you regain access to your apartment<br />
+          management dashboard safely and securely.
+        </p>
+        <Image
+          src="/password.png"
+          alt="Secure Recovery Process"
+          width={1600}
+          height={1200}
+          className="rounded-lg max-w-full h-auto opacity-0 animate-slide-up-delay-3"
+        />
       </div>
     </div>
   )

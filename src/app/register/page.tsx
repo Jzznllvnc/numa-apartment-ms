@@ -193,22 +193,20 @@ export default function Register() {
       </div>
 
       {/* Right Side - Hero Image */}
-      <div className="hidden lg:block relative flex-1 bg-gradient-to-br from-green-600 to-blue-700 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0">
-        <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-6">
-          <div className="max-w-md text-center space-y-4">
-            <h2 className="text-4xl font-bold">
-              Your Home, Your Rules.<br />
-              Managed with <span className={`${oleoScript.className}`}>Numa.</span>
-            </h2>
-            <p className="text-base opacity-90">
-              Create your account and start streamlining<br />
-              your operations today.
-            </p>
-            <div className="mt-6 bg-white/10 rounded-lg p-4 flex items-center justify-center aspect-video">
-              <p className="text-white/70">Features Preview</p>
-            </div>
-          </div>
-        </div>
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-green-600 to-blue-700 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0 flex-col justify-center items-center text-white p-6">
+        <h2 className="text-4xl font-bold mb-4 max-w-lg text-center opacity-0 animate-slide-up-delay-1">
+          Effortlessly manage your apartment operations.
+        </h2>
+        <p className="text-base mb-20 max-w-lg text-center opacity-0 animate-slide-up-delay-2">
+          Sign up to create your account, or contact admin for assistance.
+        </p>
+        <Image
+          src="/register.png"
+          alt="Features Preview"
+          width={1600}
+          height={1200}
+          className="rounded-lg max-w-full h-auto opacity-0 animate-slide-up-delay-3"
+        />
       </div>
     </div>
   )
