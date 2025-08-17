@@ -189,33 +189,50 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
       setClearing(true);
       setShowDropdown(false);
 
-      // Clear messages using the database function
-      const { error } = await supabase.rpc('clear_conversation_messages', {
+      // Simple clear operation - just call the function
+      const { error } = await supabase.rpc('clear_conversation_messages_for_user', {
         conversation_id_param: selectedConversation.id
       });
 
       if (error) {
-        console.error('Error clearing chat messages:', error);
+        console.error('Error clearing chat:', error);
+        alert('Failed to clear chat. Please try again.');
         return;
       }
 
-      // Update local conversation state
+      // Update conversation state
       const updatedConversation = {
         ...selectedConversation,
-        tenant_unread_count: 0,
-        admin_unread_count: 0,
-        last_message_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      
+      // Reset unread count for current user only
+      if (currentUser.role === 'admin') {
+        updatedConversation.admin_unread_count = 0;
+      } else {
+        updatedConversation.tenant_unread_count = 0;
+      }
+      
       setSelectedConversation(updatedConversation);
 
-      // Trigger the callback to update chat button
+      // Update chat button
       if (onMarkAsRead) {
         onMarkAsRead();
       }
 
+      // Small delay for animation
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Trigger reload
+      setSelectedConversation(prev => prev ? {
+        ...prev,
+        updated_at: new Date().toISOString(),
+        _reloadTrigger: Date.now()
+      } : null);
+
     } catch (error) {
       console.error('Error clearing chat:', error);
+      alert('An unexpected error occurred.');
     } finally {
       setClearing(false);
     }
@@ -307,6 +324,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
               conversation={selectedConversation}
               currentUser={currentUser}
               onConversationUpdate={setSelectedConversation}
+              clearing={clearing}
             />
           ) : view === 'tenant-list' && currentUser?.role === 'admin' ? (
             <TenantList

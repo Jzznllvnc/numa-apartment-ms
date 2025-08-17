@@ -10,12 +10,14 @@ interface ChatConversationViewProps {
   conversation: ChatConversation;
   currentUser: User | null;
   onConversationUpdate: (conversation: ChatConversation) => void;
+  clearing?: boolean; // Add clearing state prop
 }
 
 const ChatConversationView: React.FC<ChatConversationViewProps> = ({
   conversation,
   currentUser,
   onConversationUpdate,
+  clearing = false, // Default to false
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -90,14 +92,8 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
           async (payload) => {
             const updatedConversation = payload.new as ChatConversation;
             
-            // Check if this is a chat clear operation (both unread counts are 0 and last_message_at was updated recently)
-            const timeDiff = Math.abs(new Date(updatedConversation.updated_at).getTime() - new Date().getTime());
-            if (updatedConversation.tenant_unread_count === 0 && 
-                updatedConversation.admin_unread_count === 0 && 
-                timeDiff < 5000) {
-              // Reload messages to reflect the cleared state
-              await loadMessages();
-            }
+            // Update the conversation state
+            onConversationUpdate(updatedConversation);
           }
         )
         .subscribe();
@@ -108,6 +104,18 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
     }
   }, [conversation.id, currentUser?.id]);
 
+  // Watch for conversation updates and reload messages if needed
+  useEffect(() => {
+    // Reload messages when conversation is updated (e.g., after clearing)
+    if (conversation.id && conversation.updated_at) {
+      const timeDiff = Math.abs(new Date(conversation.updated_at).getTime() - new Date().getTime());
+      // If conversation was updated very recently (within 3 seconds), reload messages
+      if (timeDiff < 3000 || (conversation as any)._reloadTrigger) {
+        loadMessages();
+      }
+    }
+  }, [conversation.updated_at, (conversation as any)._reloadTrigger]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -117,22 +125,77 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
   };
 
   const loadMessages = async () => {
+    if (!currentUser) return;
+    
     try {
       setLoading(true);
-      const { data: messagesData } = await supabase
+      
+      // Simple message loading with sender info in a single query using joins
+      const { data: messagesData, error } = await supabase
         .from('chat_messages')
         .select(`
-          *,
-          sender:users(*)
+          id,
+          conversation_id,
+          sender_id,
+          message_text,
+          is_read,
+          created_at
         `)
         .eq('conversation_id', conversation.id)
         .order('created_at', { ascending: true });
 
-      if (messagesData) {
-        setMessages(messagesData);
+      if (error) {
+        console.error('Error loading messages:', error);
+        return;
+      }
+
+      if (messagesData && messagesData.length > 0) {
+        // Check if the current user has cleared messages
+        let filteredMessages = messagesData;
+        
+        try {
+          const { data: clearData } = await supabase
+            .from('user_cleared_messages')
+            .select('cleared_at')
+            .eq('user_id', currentUser.id)
+            .eq('conversation_id', conversation.id)
+            .order('cleared_at', { ascending: false })
+            .limit(1);
+
+          // If user has cleared messages, only show messages after the clear timestamp
+          if (clearData && clearData.length > 0) {
+            const clearTimestamp = new Date(clearData[0].cleared_at);
+            filteredMessages = messagesData.filter(msg => 
+              new Date(msg.created_at) > clearTimestamp
+            );
+          }
+        } catch (clearError) {
+          // If clear check fails, just show all messages
+          console.warn('Could not check clear status, showing all messages');
+        }
+
+        // Add basic sender information without additional database queries
+        const messagesWithSender = filteredMessages.map(message => ({
+          ...message,
+          sender: {
+            id: message.sender_id,
+            full_name: message.sender_id === currentUser.id ? 'You' : 'User',
+            role: message.sender_id === currentUser.id ? currentUser.role : 'user',
+            email: '',
+            avatar_url: null,
+            phone_number: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          } as User
+        }));
+        
+        setMessages(messagesWithSender);
+      } else {
+        setMessages([]);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
+      setMessages([]);
     } finally {
       setLoading(false);
     }
@@ -272,7 +335,23 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 relative">
+      {/* Clearing overlay */}
+      {clearing && (
+        <div className="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 z-10 flex items-center justify-center">
+          <div className="text-center">
+            <LoadingAnimation 
+              size={80} 
+              message="" 
+              className="mb-2"
+            />
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+              Clearing chat...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 ? (

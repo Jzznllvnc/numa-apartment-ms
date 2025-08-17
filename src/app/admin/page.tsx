@@ -1190,7 +1190,7 @@ export default function AdminDashboard() {
                         <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
                           <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
+                        <div className="ml-2">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Unit {unit.unit_number}</p>
                           <p className="text-xs text-gray-500">{unit.tenant_name}</p>
                         </div>
@@ -1229,14 +1229,16 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   recentAnnouncements.slice(0, 3).map((announcement, index) => (
-                    <div key={announcement.id} className="flex items-start gap-3">
-                      <div className="mt-1 flex-shrink-0">
-                        <Megaphone className="h-4 w-4 text-blue-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{announcement.title}</p>
-                        <p className="text-xs text-gray-500 mt-1">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
-                        <p className="text-xs text-gray-400">{formatTimeAgo(announcement.created_at)}</p>
+                    <div key={announcement.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-5">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <Megaphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{announcement.title}</p>
+                          <p className="text-xs text-gray-500">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
+                          <p className="text-xs text-gray-400">{formatTimeAgo(announcement.created_at)}</p>
+                        </div>
                       </div>
                     </div>
                   ))
