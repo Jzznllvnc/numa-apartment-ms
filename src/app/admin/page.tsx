@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import * as React from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown, Search } from 'lucide-react'
+import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown, Search, ListFilter, ChevronDown, Megaphone, ArrowUpRight } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import clsx from 'clsx'
 
@@ -38,6 +40,20 @@ interface RecentPayment {
   status: string
   tenant_name?: string
   unit_number?: string
+}
+
+interface RecentOccupiedUnit {
+  id: string
+  unit_number: string
+  tenant_name: string
+  occupied_at: string
+}
+
+interface RecentAnnouncement {
+  id: string
+  title: string
+  content: string
+  created_at: string
 }
 
 interface WeeklyActivityData {
@@ -75,10 +91,15 @@ export default function AdminDashboard() {
   const [weeklyActivityData, setWeeklyActivityData] = useState<WeeklyActivityData[]>([])
   const [propertyOverviewData, setPropertyOverviewData] = useState<PropertyOverviewData[]>([])
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([])
+  const [recentOccupiedUnits, setRecentOccupiedUnits] = useState<RecentOccupiedUnit[]>([])
+  const [recentAnnouncements, setRecentAnnouncements] = useState<RecentAnnouncement[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRangePeriod, setDateRangePeriod] = useState<string>('week')
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [sortBy, setSortBy] = useState<string>('date_desc')
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+  const filterDropdownRef = React.useRef<HTMLDivElement>(null)
+  const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
@@ -88,6 +109,24 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchActivityData()
   }, [dateRangePeriod])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isFilterDropdownOpen &&
+        filterDropdownRef.current &&
+        !filterDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsFilterDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isFilterDropdownOpen])
 
   const fetchActivityData = async () => {
     const activityData = await fetchWeeklyActivity(dateRangePeriod)
@@ -174,6 +213,10 @@ export default function AdminDashboard() {
       // Fetch recent payments data
       const recentPaymentsData = await fetchRecentPayments()
 
+      // Fetch recent occupied units and announcements
+      const recentOccupiedUnitsData = await fetchRecentOccupiedUnits()
+      const recentAnnouncementsData = await fetchRecentAnnouncements()
+
       setStats({
         totalUnits,
         occupiedUnits,
@@ -194,6 +237,8 @@ export default function AdminDashboard() {
       setWeeklyActivityData(weeklyData)
       setPropertyOverviewData(propertyData)
       setRecentPayments(recentPaymentsData)
+      setRecentOccupiedUnits(recentOccupiedUnitsData)
+      setRecentAnnouncements(recentAnnouncementsData)
     } catch (error) {
       console.error('Error fetching dashboard stats:', error)
     } finally {
@@ -450,7 +495,7 @@ export default function AdminDashboard() {
         .from('payments')
         .select('*')
         .order('payment_date', { ascending: false })
-        .limit(10)
+        .limit(6)
 
       if (paymentsError) {
         console.error('Recent payments query error:', paymentsError)
@@ -512,7 +557,85 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchRecentOccupiedUnits = async (): Promise<RecentOccupiedUnit[]> => {
+    try {
+      // Get recent leases with occupied units
+      const { data: recentLeases, error: leasesError } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          unit_id,
+          tenant_id,
+          start_date,
+          units (unit_number),
+          users (full_name)
+        `)
+        .eq('is_active', true)
+        .order('start_date', { ascending: false })
+        .limit(10)
+
+      if (leasesError) {
+        console.error('Recent occupied units query error:', leasesError)
+        return []
+      }
+
+      const occupiedUnits = (recentLeases || []).map((lease: any) => ({
+        id: lease.id,
+        unit_number: lease.units?.unit_number || 'Unknown',
+        tenant_name: lease.users?.full_name || 'Unknown Tenant',
+        occupied_at: lease.start_date
+      }))
+
+      return occupiedUnits
+    } catch (error) {
+      console.error('Error fetching recent occupied units:', error)
+      return []
+    }
+  }
+
+  const fetchRecentAnnouncements = async (): Promise<RecentAnnouncement[]> => {
+    try {
+      // Get recent announcements
+      const { data: announcements, error: announcementsError } = await supabase
+        .from('announcements')
+        .select('id, title, content, created_at')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (announcementsError) {
+        console.error('Recent announcements query error:', announcementsError)
+        return []
+      }
+
+      return announcements || []
+    } catch (error) {
+      console.error('Error fetching recent announcements:', error)
+      return []
+    }
+  }
+
   const occupancyRate = stats.totalUnits > 0 ? (stats.occupiedUnits / stats.totalUnits) * 100 : 0
+
+  // Utility function to format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} min ago`
+    }
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+    }
+    const diffInDays = Math.floor(diffInHours / 24)
+    if (diffInDays < 7) {
+      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+    }
+    const diffInWeeks = Math.floor(diffInDays / 7)
+    return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`
+  }
 
   // Filter and sort payments
   const filteredAndSortedPayments = React.useMemo(() => {
@@ -574,164 +697,160 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-full">
 
-      {/* Top KPI Cards (enhanced) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Main Grid Layout: Left Column (KPIs + Main Cards) + Right Column (Property Overview + Side Cards) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: KPI Cards + Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* 3 KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Revenue (payments) */}
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Total Revenue</div>
+        <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">Total Revenue</div>
             <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <DollarSign className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-6">
-            <div className="text-4xl font-semibold leading-none">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
-            {(() => {
-              const last = stats.revenueLastMonth
-              const curr = stats.revenueThisMonth
-              if (last === 0 && curr === 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
-              }
-              
-              let pct: number
-              let up: boolean
-              
-              if (last === 0 && curr > 0) {
-                // When starting from 0, show 100% increase
-                pct = 100
-                up = true
-              } else if (last > 0 && curr === 0) {
-                // When going to 0, show 100% decrease
-                pct = 100
-                up = false
-              } else {
-                // Normal calculation with 1-100% cap
-                up = curr >= last
-                pct = Math.abs(((curr - last) / last) * 100)
-                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-              }
-              
-              return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                  {up ? '↑' : '↓'} {pct.toFixed(1)}%
-                </span>
-              )
-            })()}
+          <div className="flex-1 flex items-center">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl font-semibold leading-none">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+              {(() => {
+                const last = stats.revenueLastMonth
+                const curr = stats.revenueThisMonth
+                if (last === 0 && curr === 0) {
+                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                }
+                
+                let pct: number
+                let up: boolean
+                
+                if (last === 0 && curr > 0) {
+                  // When starting from 0, show 100% increase
+                  pct = 100
+                  up = true
+                } else if (last > 0 && curr === 0) {
+                  // When going to 0, show 100% decrease
+                  pct = 100
+                  up = false
+                } else {
+                  // Normal calculation with 1-100% cap
+                  up = curr >= last
+                  pct = Math.abs(((curr - last) / last) * 100)
+                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+                }
+                
+                return (
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                    {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                    {pct.toFixed(1)}%
+                  </span>
+                )
+              })()}
+            </div>
           </div>
-          <div className="mt-4 text-xs text-gray-500">Based on recorded payments</div>
+          <div className="text-xs text-gray-500 mt-auto">Based on recorded payments</div>
         </div>
 
         {/* New Tenants */}
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">New Tenants</div>
+        <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">New Tenants</div>
             <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <Users className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-6">
-            <div className="text-4xl font-semibold leading-none">{stats.newTenantsThisMonth}</div>
-            {(() => {
-              const last = stats.newTenantsLastMonth
-              const curr = stats.newTenantsThisMonth
-              if (last === 0 && curr === 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
-              }
-              
-              let pct: number
-              let up: boolean
-              
-              if (last === 0 && curr > 0) {
-                // When starting from 0, show 100% increase
-                pct = 100
-                up = true
-              } else if (last > 0 && curr === 0) {
-                // When going to 0, show 100% decrease
-                pct = 100
-                up = false
-              } else {
-                // Normal calculation with 1-100% cap
-                up = curr >= last
-                pct = Math.abs(((curr - last) / last) * 100)
-                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-              }
-              
-              return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                  {up ? '↑' : '↓'} {pct.toFixed(1)}%
-                </span>
-              )
-            })()}
+          <div className="flex-1 flex items-center">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl font-semibold leading-none">{stats.newTenantsThisMonth}</div>
+              {(() => {
+                const last = stats.newTenantsLastMonth
+                const curr = stats.newTenantsThisMonth
+                if (last === 0 && curr === 0) {
+                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                }
+                
+                let pct: number
+                let up: boolean
+                
+                if (last === 0 && curr > 0) {
+                  // When starting from 0, show 100% increase
+                  pct = 100
+                  up = true
+                } else if (last > 0 && curr === 0) {
+                  // When going to 0, show 100% decrease
+                  pct = 100
+                  up = false
+                } else {
+                  // Normal calculation with 1-100% cap
+                  up = curr >= last
+                  pct = Math.abs(((curr - last) / last) * 100)
+                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+                }
+                
+                return (
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                    {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                    {pct.toFixed(1)}%
+                  </span>
+                )
+              })()}
+            </div>
           </div>
-          <div className="mt-4 text-xs text-gray-500">Registered this month</div>
+          <div className="text-xs text-gray-500 mt-auto">Registered this month</div>
         </div>
 
         {/* Maintenance Requests */}
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Maintenance Requests</div>
+        <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
+          <div className="flex items-start justify-between mb-2">
+            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">Maintenance Requests</div>
             <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <Wrench className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-6">
-            <div className="text-4xl font-semibold leading-none">{stats.maintenanceThisMonth}</div>
-            {(() => {
-              const last = stats.maintenanceLastMonth
-              const curr = stats.maintenanceThisMonth
-              if (last === 0 && curr === 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
-              }
-              
-              let pct: number
-              let isGood: boolean // For maintenance, fewer is better
-              
-              if (last === 0 && curr > 0) {
-                // For maintenance requests, increase from 0 is bad (red)
-                pct = 100
-                isGood = false
-              } else if (last > 0 && curr === 0) {
-                // For maintenance requests, decrease to 0 is good (green)
-                pct = 100
-                isGood = true
-              } else {
-                // Normal calculation with 1-100% cap
-                // For maintenance requests, fewer is better
-                isGood = curr <= last
-                pct = Math.abs(((curr - last) / last) * 100)
-                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-              }
-              
-              return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full', isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                  {curr > last ? '↑' : '↓'} {pct.toFixed(1)}%
-                </span>
-              )
-            })()}
-          </div>
-          <div className="mt-4 text-xs text-gray-500">Requests submitted this month</div>
-        </div>
-
-        {/* Total Units */}
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Total Units</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Building className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <div className="flex-1 flex items-center">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl font-semibold leading-none">{stats.maintenanceThisMonth}</div>
+              {(() => {
+                const last = stats.maintenanceLastMonth
+                const curr = stats.maintenanceThisMonth
+                if (last === 0 && curr === 0) {
+                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                }
+                
+                let pct: number
+                let isGood: boolean // For maintenance, fewer is better
+                
+                if (last === 0 && curr > 0) {
+                  // For maintenance requests, increase from 0 is bad (red)
+                  pct = 100
+                  isGood = false
+                } else if (last > 0 && curr === 0) {
+                  // For maintenance requests, decrease to 0 is good (green)
+                  pct = 100
+                  isGood = true
+                } else {
+                  // Normal calculation with 1-100% cap
+                  // For maintenance requests, fewer is better
+                  isGood = curr <= last
+                  pct = Math.abs(((curr - last) / last) * 100)
+                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+                }
+                
+                return (
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                    {curr > last ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                    {pct.toFixed(1)}%
+                  </span>
+                )
+              })()}
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-6">
-            <div className="text-4xl font-semibold leading-none">{stats.totalUnits}</div>
-          </div>
-          <div className="mt-4 text-xs text-gray-500">Occupancy: {occupancyRate.toFixed(1)}%</div>
+          <div className="text-xs text-gray-500 mt-auto">Requests submitted this month</div>
         </div>
+
       </div>
 
-      {/* Unit status summary moved to Units/Maintenance pages */}
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Area Chart with Gradient */}
+          {/* New Tenants & Leases Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -742,7 +861,7 @@ export default function AdminDashboard() {
                 <Select 
                   value={dateRangePeriod} 
                   onChange={setDateRangePeriod}
-                  className="h-8 text-xs"
+                  className="h-8 text-sm"
                 >
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
@@ -820,68 +939,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Property Overview Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="mb-1">Property Overview</CardTitle>
-            <CardDescription>Units & Payments Status</CardDescription>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 mt-6">
-              {/* Pie Chart - responsive size */}
-              <div className="flex justify-center items-center flex-shrink-0 w-full max-w-xs">
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={propertyOverviewData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {propertyOverviewData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value, name, props) => [
-                        `${props.payload?.count || value}`,
-                        name
-                      ]}
-                      cursor={false}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              
-              {/* Legends - responsive layout */}
-              <div className="flex flex-col justify-center gap-3 w-full lg:w-auto">
-                {propertyOverviewData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-3 justify-center lg:justify-start">
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0" 
-                      style={{ backgroundColor: item.color }}
-                    ></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {item.name} ({item.value}%)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Payments */}
+          {/* Recent Payments Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -896,24 +954,82 @@ export default function AdminDashboard() {
                   placeholder="Search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9"
+                  className="pl-10 h-9 focus-visible:ring-blue-500"
                 />
               </div>
-              <div className="w-48">
-                <Select 
-                  value={sortBy} 
-                  onChange={setSortBy}
-                  className="h-9"
-                >
-                  <option value="date_desc">Date (Newest First)</option>
-                  <option value="date_asc">Date (Oldest First)</option>
-                  <option value="amount_desc">Amount (High to Low)</option>
-                  <option value="amount_asc">Amount (Low to High)</option>
-                  <option value="tenant_name">Tenant Name (A-Z)</option>
-                  <option value="unit_number">Unit Number</option>
-                  <option value="status">Status</option>
-                  <option value="method">Payment Method</option>
-                </Select>
+                  <div className="relative" ref={filterDropdownRef}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                      className="h-9 px-3 flex items-center gap-2"
+                    >
+                      <ListFilter className="h-4 w-4" />
+                      Filter
+                      <ChevronDown className={clsx("h-4 w-4 transition-transform duration-200", isFilterDropdownOpen && "rotate-180")} />
+                    </Button>
+                    {isFilterDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                          <div className="py-1">
+                            <button
+                              onClick={() => { setSortBy('date_desc'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700', 
+                                sortBy === 'date_desc' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Date (Newest First)
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('date_asc'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'date_asc' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Date (Oldest First)
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('amount_desc'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'amount_desc' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Amount (High to Low)
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('amount_asc'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'amount_asc' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Amount (Low to High)
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('tenant_name'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'tenant_name' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Tenant Name (A-Z)
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('unit_number'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'unit_number' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Unit Number
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('status'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'status' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Status
+                            </button>
+                            <button
+                              onClick={() => { setSortBy('method'); setIsFilterDropdownOpen(false); }}
+                              className={clsx('w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700',
+                                sortBy === 'method' && 'bg-gray-100 dark:bg-gray-700')}
+                            >
+                              Payment Method
+                            </button>
+                          </div>
+                        </div>
+                      )}
               </div>
             </div>
           </div>
@@ -978,6 +1094,160 @@ export default function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
+
+        </div>
+
+        {/* Right Column: Property Overview + Side Cards */}
+        <div className="space-y-6">
+          {/* Property Overview Chart */}
+          <Card className="h-[29.3rem] rounded-2xl">
+            <CardHeader>
+              <CardTitle>Property Overview</CardTitle>
+              <CardDescription>Units & Payments Status</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center -mt-5">
+              {/* Pie Chart - centered and moved up */}
+              <div className="flex justify-center items-center mb-4">
+                <PieChart width={300} height={300}>
+                  <Pie
+                    data={propertyOverviewData}
+                    cx={150}
+                    cy={150}
+                    innerRadius={45}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    cornerRadius={6}
+                    dataKey="value"
+                  >
+                    {propertyOverviewData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, name, props) => [
+                      `${props.payload?.count || value}`,
+                      name
+                    ]}
+                    cursor={false}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
+                  />
+                </PieChart>
+              </div>
+              
+              {/* Legends - single horizontal line below chart with proper spacing */}
+              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 w-full px-2 pb-2">
+                {propertyOverviewData.map((item, index) => (
+                  <div key={index} className="flex items-center text-xs">
+                    <div 
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0 mr-2" 
+                      style={{ backgroundColor: item.color }}
+                    ></div>
+                    <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-sm mr-1">
+                      {item.name}
+                    </span>
+                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                      ({item.value}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Combined Occupied Units & Announcements Card */}
+          <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6">
+            {/* Occupied Units Section */}
+            <div className="mb-6">
+              <div className="mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Occupied Units</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Recently occupied units</p>
+                  </div>
+                  <button
+                    onClick={() => router.push('/admin/units')}
+                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <ArrowUpRight className="h-6 w-6 text-black hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {recentOccupiedUnits.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Building className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No recent occupancies</p>
+                  </div>
+                ) : (
+                  recentOccupiedUnits.slice(0, 3).map((unit, index) => (
+                    <div key={unit.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                          <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Unit {unit.unit_number}</p>
+                          <p className="text-xs text-gray-500">{unit.tenant_name}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Active</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Separation Line */}
+            <div className="border-t border-gray-200 dark:border-gray-700 my-6"></div>
+
+            {/* Announcements Section */}
+            <div>
+              <div className="mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Announcements</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Recent property announcements</p>
+                  </div>
+                  <button
+                    onClick={() => router.push('/admin/announcements')}
+                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <ArrowUpRight className="h-6 w-6 text-black hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {recentAnnouncements.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Megaphone className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No recent announcements</p>
+                  </div>
+                ) : (
+                  recentAnnouncements.slice(0, 3).map((announcement, index) => (
+                    <div key={announcement.id} className="flex items-start gap-3">
+                      <div className="mt-1 flex-shrink-0">
+                        <Megaphone className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{announcement.title}</p>
+                        <p className="text-xs text-gray-500 mt-1">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
+                        <p className="text-xs text-gray-400">{formatTimeAgo(announcement.created_at)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
 
       {/* Bottom padding for proper scroll */}
       <div className="h-8"></div>

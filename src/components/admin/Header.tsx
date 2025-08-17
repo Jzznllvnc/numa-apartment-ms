@@ -176,7 +176,7 @@ function NotificationButton() {
       if (chatResponse.data) {
         const chatItems = chatResponse.data.map((m: any) => ({
           id: `chat-${m.id}`,
-          title: `New message from ${m.conversation?.tenant?.full_name || 'Tenant'}`,
+          title: `New message from ${(m.conversation?.tenant as any)?.full_name || 'Tenant'}`,
           subtitle: 'You have a new message',
           createdAt: m.created_at,
           type: 'chat' as const,
@@ -237,7 +237,7 @@ function NotificationButton() {
 
           const newItem = {
             id: `chat-${m.id}`,
-            title: `New message from ${conversation?.tenant?.full_name || 'Tenant'}`,
+            title: `New message from ${(conversation?.tenant as any)?.full_name || 'Tenant'}`,
             subtitle: 'You have a new message',
             createdAt: m.created_at as string,
             type: 'chat' as const,

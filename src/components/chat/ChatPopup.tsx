@@ -6,7 +6,7 @@ import { User, ChatConversation } from '@/types/database';
 import TenantList from '@/components/chat/TenantList';
 import ChatConversationView from '@/components/chat/ChatConversationView';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
-import { MessageCircleMore, ArrowLeft, X } from 'lucide-react';
+import { MessageCircleMore, ArrowLeft, X, MoreHorizontal } from 'lucide-react';
 
 interface ChatPopupProps {
   isOpen: boolean;
@@ -19,6 +19,8 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'loading' | 'tenant-list' | 'conversation'>('loading');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -26,9 +28,17 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
       setLoading(true);
       setView('loading');
       setSelectedConversation(null);
+      setShowDropdown(false);
       getCurrentUser();
+    } else {
+      setShowDropdown(false);
     }
   }, [isOpen]);
+
+  // Close dropdown when view changes
+  useEffect(() => {
+    setShowDropdown(false);
+  }, [view]);
 
   // Mark messages as read when conversation is selected
   useEffect(() => {
@@ -172,6 +182,45 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
     setView('tenant-list');
   };
 
+  const clearChat = async () => {
+    if (!selectedConversation || !currentUser || clearing) return;
+
+    try {
+      setClearing(true);
+      setShowDropdown(false);
+
+      // Clear messages using the database function
+      const { error } = await supabase.rpc('clear_conversation_messages', {
+        conversation_id_param: selectedConversation.id
+      });
+
+      if (error) {
+        console.error('Error clearing chat messages:', error);
+        return;
+      }
+
+      // Update local conversation state
+      const updatedConversation = {
+        ...selectedConversation,
+        tenant_unread_count: 0,
+        admin_unread_count: 0,
+        last_message_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setSelectedConversation(updatedConversation);
+
+      // Trigger the callback to update chat button
+      if (onMarkAsRead) {
+        onMarkAsRead();
+      }
+
+    } catch (error) {
+      console.error('Error clearing chat:', error);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -202,12 +251,46 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
               }
             </h3>
           </div>
-          <button
-            onClick={onClose}
-            className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-1 relative">
+            {view === 'conversation' && selectedConversation && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
+                  disabled={clearing}
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+                
+                {showDropdown && (
+                  <>
+                    {/* Backdrop to close dropdown */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setShowDropdown(false)}
+                    />
+                    
+                    {/* Dropdown menu */}
+                    <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-200 dark:border-gray-600 z-20 min-w-[120px]">
+                      <button
+                        onClick={clearChat}
+                        disabled={clearing}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {clearing ? 'Clearing...' : 'Clear chat'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}

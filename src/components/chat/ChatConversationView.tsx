@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User, ChatConversation, ChatMessage } from '@/types/database';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
-import { Send } from 'lucide-react';
+import { Send, MessageCircleDashed } from 'lucide-react';
 
 interface ChatConversationViewProps {
   conversation: ChatConversation;
@@ -29,7 +29,7 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
       loadMessages();
       markMessagesAsRead();
       
-      // Subscribe to new messages for real-time updates
+      // Subscribe to new messages and deletions for real-time updates
       const subscription = supabase
         .channel(`conversation_${conversation.id}`)
         .on(
@@ -61,6 +61,42 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
             // Mark as read if not sent by current user
             if (newMessage.sender_id !== currentUser?.id) {
               markMessagesAsRead();
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `conversation_id=eq.${conversation.id}`
+          },
+          (payload) => {
+            const deletedMessage = payload.old as ChatMessage;
+            
+            // Remove the deleted message from the UI
+            setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id));
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'chat_conversations',
+            filter: `id=eq.${conversation.id}`
+          },
+          async (payload) => {
+            const updatedConversation = payload.new as ChatConversation;
+            
+            // Check if this is a chat clear operation (both unread counts are 0 and last_message_at was updated recently)
+            const timeDiff = Math.abs(new Date(updatedConversation.updated_at).getTime() - new Date().getTime());
+            if (updatedConversation.tenant_unread_count === 0 && 
+                updatedConversation.admin_unread_count === 0 && 
+                timeDiff < 5000) {
+              // Reload messages to reflect the cleared state
+              await loadMessages();
             }
           }
         )
@@ -242,9 +278,9 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
         {messages.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
             <div className="text-center">
-              <Send className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm">No messages yet</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Start the conversation!</p>
+              <MessageCircleDashed className="w-20 h-20 mx-auto text-gray-300 dark:text-gray-600 mb-4 mt-10" />
+              <p className="text-lg font-semibold">No messages yet</p>
+              <p className="text-base text-gray-400 dark:text-gray-500 mt-1">Start the conversation!</p>
             </div>
           </div>
         ) : (
