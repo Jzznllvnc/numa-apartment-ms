@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import * as React from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown } from 'lucide-react'
+import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown, Search } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import clsx from 'clsx'
 
@@ -73,11 +76,23 @@ export default function AdminDashboard() {
   const [propertyOverviewData, setPropertyOverviewData] = useState<PropertyOverviewData[]>([])
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [dateRangePeriod, setDateRangePeriod] = useState<string>('week')
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const [sortBy, setSortBy] = useState<string>('date_desc')
   const supabase = createClient()
 
   useEffect(() => {
     fetchDashboardStats()
   }, [])
+
+  useEffect(() => {
+    fetchActivityData()
+  }, [dateRangePeriod])
+
+  const fetchActivityData = async () => {
+    const activityData = await fetchWeeklyActivity(dateRangePeriod)
+    setWeeklyActivityData(activityData)
+  }
 
   const fetchDashboardStats = async () => {
     try {
@@ -150,8 +165,8 @@ export default function AdminDashboard() {
 
       const monthlyRevenue = leases?.reduce((sum, lease) => sum + (parseFloat(lease.rent_amount) || 0), 0) || 0
 
-      // Fetch weekly activity data (last 7 days)
-      const weeklyData = await fetchWeeklyActivity()
+      // Fetch weekly activity data (based on selected period)
+      const weeklyData = await fetchWeeklyActivity(dateRangePeriod)
 
       // Fetch property overview data
       const propertyData = await fetchPropertyOverview(totalUnits, occupiedUnits, vacantUnits, maintenanceUnits)
@@ -186,31 +201,58 @@ export default function AdminDashboard() {
     }
   }
 
-  const fetchWeeklyActivity = async (): Promise<WeeklyActivityData[]> => {
+  const fetchWeeklyActivity = async (period: string = 'week'): Promise<WeeklyActivityData[]> => {
     try {
       const today = new Date()
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
-      
+      let startDate: Date
+      let endDate: Date
+      let periodLabels: string[] = []
+      let periodCount = 0
+
+      // Set date ranges based on period
+      if (period === 'week') {
+        startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
+        endDate = new Date(today)
+        periodLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        periodCount = 7
+      } else if (period === 'month') {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        periodCount = Math.ceil(endDate.getDate() / 7) // Number of weeks in month
+        for (let i = 1; i <= periodCount; i++) {
+          periodLabels.push(`Week ${i}`)
+        }
+      } else if (period === 'year') {
+        startDate = new Date(today.getFullYear(), 0, 1)
+        endDate = new Date(today.getFullYear(), 11, 31)
+        periodLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        periodCount = 12
+      } else {
+        // Default to week
+        startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
+        endDate = new Date(today)
+        periodLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        periodCount = 7
+      }
+
       // Set time to start and end of day for proper filtering
-      const startOfWeek = new Date(weekAgo)
-      startOfWeek.setHours(0, 0, 0, 0)
-      const endOfToday = new Date(today)
-      endOfToday.setHours(23, 59, 59, 999)
+      startDate.setHours(0, 0, 0, 0)
+      endDate.setHours(23, 59, 59, 999)
       
-      // Get new tenants from last 7 days
-      const { data: weeklyTenants, error: tenantsError } = await supabase
+      // Get new tenants for the period
+      const { data: periodTenants, error: tenantsError } = await supabase
         .from('users')
         .select('created_at')
         .eq('role', 'tenant')
-        .gte('created_at', startOfWeek.toISOString())
-        .lte('created_at', endOfToday.toISOString())
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
 
-      // Get new leases from last 7 days
-      const { data: weeklyLeases, error: leasesError } = await supabase
+      // Get new leases for the period
+      const { data: periodLeases, error: leasesError } = await supabase
         .from('leases')
         .select('created_at')
-        .gte('created_at', startOfWeek.toISOString())
-        .lte('created_at', endOfToday.toISOString())
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
 
       if (tenantsError) {
         console.error('Tenants query error:', tenantsError)
@@ -221,47 +263,104 @@ export default function AdminDashboard() {
         throw leasesError
       }
 
-      // Initialize data for last 7 days
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-      const weeklyData: WeeklyActivityData[] = []
-      
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
-        const dayName = daysOfWeek[date.getDay()]
-        const dateStr = date.toISOString().split('T')[0]
+      const activityData: WeeklyActivityData[] = []
+
+      if (period === 'week') {
+        // Daily breakdown for week
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000)
+          const dayName = periodLabels[date.getDay()]
+          const dateStr = date.toISOString().split('T')[0]
+          
+          const dailyTenants = (periodTenants || []).filter((tenant: any) => {
+            const tenantDate = new Date(tenant.created_at).toISOString().split('T')[0]
+            return tenantDate === dateStr
+          }).length
+
+          const dailyLeases = (periodLeases || []).filter((lease: any) => {
+            const leaseDate = new Date(lease.created_at).toISOString().split('T')[0]
+            return leaseDate === dateStr
+          }).length
+
+          activityData.push({
+            name: dayName,
+            newTenants: dailyTenants,
+            newLeases: dailyLeases
+          })
+        }
+      } else if (period === 'month') {
+        // Weekly breakdown for month
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
         
-        // Count new tenants for this day
-        const dailyTenants = (weeklyTenants || []).filter((tenant: any) => {
-          const tenantDate = new Date(tenant.created_at).toISOString().split('T')[0]
-          return tenantDate === dateStr
-        }).length
+        for (let week = 1; week <= periodCount; week++) {
+          const weekStart = new Date(firstDay.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000)
+          const weekEnd = new Date(Math.min(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000, lastDay.getTime()))
+          
+          const weekTenants = (periodTenants || []).filter((tenant: any) => {
+            const tenantDate = new Date(tenant.created_at)
+            return tenantDate >= weekStart && tenantDate <= weekEnd
+          }).length
 
-        // Count new leases for this day
-        const dailyLeases = (weeklyLeases || []).filter((lease: any) => {
-          const leaseDate = new Date(lease.created_at).toISOString().split('T')[0]
-          return leaseDate === dateStr
-        }).length
+          const weekLeases = (periodLeases || []).filter((lease: any) => {
+            const leaseDate = new Date(lease.created_at)
+            return leaseDate >= weekStart && leaseDate <= weekEnd
+          }).length
 
-        weeklyData.push({
-          name: dayName,
-          newTenants: dailyTenants,
-          newLeases: dailyLeases
-        })
+          activityData.push({
+            name: `Week ${week}`,
+            newTenants: weekTenants,
+            newLeases: weekLeases
+          })
+        }
+      } else if (period === 'year') {
+        // Monthly breakdown for year
+        for (let month = 0; month < 12; month++) {
+          const monthStart = new Date(today.getFullYear(), month, 1)
+          const monthEnd = new Date(today.getFullYear(), month + 1, 0)
+          monthEnd.setHours(23, 59, 59, 999)
+          
+          const monthTenants = (periodTenants || []).filter((tenant: any) => {
+            const tenantDate = new Date(tenant.created_at)
+            return tenantDate >= monthStart && tenantDate <= monthEnd
+          }).length
+
+          const monthLeases = (periodLeases || []).filter((lease: any) => {
+            const leaseDate = new Date(lease.created_at)
+            return leaseDate >= monthStart && leaseDate <= monthEnd
+          }).length
+
+          activityData.push({
+            name: periodLabels[month],
+            newTenants: monthTenants,
+            newLeases: monthLeases
+          })
+        }
       }
 
-      return weeklyData
+      return activityData
     } catch (error) {
-      console.error('Error fetching weekly activity:', error)
-      // Return empty data if there's an error
-      return [
-        { name: 'Sun', newTenants: 0, newLeases: 0 },
-        { name: 'Mon', newTenants: 0, newLeases: 0 },
-        { name: 'Tue', newTenants: 0, newLeases: 0 },
-        { name: 'Wed', newTenants: 0, newLeases: 0 },
-        { name: 'Thu', newTenants: 0, newLeases: 0 },
-        { name: 'Fri', newTenants: 0, newLeases: 0 },
-        { name: 'Sat', newTenants: 0, newLeases: 0 },
-      ]
+      console.error('Error fetching activity data:', error)
+      // Return appropriate empty data based on period
+      const emptyData: WeeklyActivityData[] = []
+      
+      if (period === 'week') {
+        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        daysOfWeek.forEach(day => {
+          emptyData.push({ name: day, newTenants: 0, newLeases: 0 })
+        })
+      } else if (period === 'month') {
+        for (let i = 1; i <= 4; i++) {
+          emptyData.push({ name: `Week ${i}`, newTenants: 0, newLeases: 0 })
+        }
+      } else if (period === 'year') {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        months.forEach(month => {
+          emptyData.push({ name: month, newTenants: 0, newLeases: 0 })
+        })
+      }
+      
+      return emptyData
     }
   }
 
@@ -415,6 +514,52 @@ export default function AdminDashboard() {
 
   const occupancyRate = stats.totalUnits > 0 ? (stats.occupiedUnits / stats.totalUnits) * 100 : 0
 
+  // Filter and sort payments
+  const filteredAndSortedPayments = React.useMemo(() => {
+    let filtered = recentPayments
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase()
+      filtered = recentPayments.filter(payment => 
+        payment.tenant_name?.toLowerCase().includes(searchLower) ||
+        payment.unit_number?.toLowerCase().includes(searchLower) ||
+        payment.payment_method?.toLowerCase().includes(searchLower) ||
+        payment.status?.toLowerCase().includes(searchLower) ||
+        String(payment.id).toLowerCase().includes(searchLower) ||
+        payment.amount_paid?.toString().includes(searchTerm)
+      )
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'date_desc':
+          return new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+        case 'date_asc':
+          return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
+        case 'amount_desc':
+          return parseFloat(b.amount_paid || '0') - parseFloat(a.amount_paid || '0')
+        case 'amount_asc':
+          return parseFloat(a.amount_paid || '0') - parseFloat(b.amount_paid || '0')
+        case 'tenant_name':
+          return (a.tenant_name || '').localeCompare(b.tenant_name || '')
+        case 'unit_number':
+          const aUnit = a.unit_number === 'No Unit Assigned' ? '999' : a.unit_number || '999'
+          const bUnit = b.unit_number === 'No Unit Assigned' ? '999' : b.unit_number || '999'
+          return aUnit.localeCompare(bUnit)
+        case 'status':
+          return (a.status || '').localeCompare(b.status || '')
+        case 'method':
+          return (a.payment_method || '').localeCompare(b.payment_method || '')
+        default:
+          return new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+      }
+    })
+
+    return sorted
+  }, [recentPayments, searchTerm, sortBy])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -439,30 +584,41 @@ export default function AdminDashboard() {
               <DollarSign className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+          <div className="mt-3 flex items-center gap-6">
+            <div className="text-4xl font-semibold leading-none">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
             {(() => {
               const last = stats.revenueLastMonth
               const curr = stats.revenueThisMonth
               if (last === 0 && curr === 0) {
                 return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
               }
+              
+              let pct: number
+              let up: boolean
+              
               if (last === 0 && curr > 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↑ 100%</span>
+                // When starting from 0, show 100% increase
+                pct = 100
+                up = true
+              } else if (last > 0 && curr === 0) {
+                // When going to 0, show 100% decrease
+                pct = 100
+                up = false
+              } else {
+                // Normal calculation with 1-100% cap
+                up = curr >= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
               }
-              if (last > 0 && curr === 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↓ 100%</span>
-              }
-              const up = curr >= last
-              const pct = Math.abs(((curr - last) / last) * 100)
+              
               return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full self-center', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                <span className={clsx('text-xs px-2 py-1 rounded-full', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {up ? '↑' : '↓'} {pct.toFixed(1)}%
                 </span>
               )
             })()}
           </div>
-          <div className="mt-2 text-xs text-gray-500">Based on recorded payments</div>
+          <div className="mt-4 text-xs text-gray-500">Based on recorded payments</div>
         </div>
 
         {/* New Tenants */}
@@ -473,30 +629,41 @@ export default function AdminDashboard() {
               <Users className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">{stats.newTenantsThisMonth}</div>
+          <div className="mt-3 flex items-center gap-6">
+            <div className="text-4xl font-semibold leading-none">{stats.newTenantsThisMonth}</div>
             {(() => {
               const last = stats.newTenantsLastMonth
               const curr = stats.newTenantsThisMonth
               if (last === 0 && curr === 0) {
                 return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
               }
+              
+              let pct: number
+              let up: boolean
+              
               if (last === 0 && curr > 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↑ 100%</span>
+                // When starting from 0, show 100% increase
+                pct = 100
+                up = true
+              } else if (last > 0 && curr === 0) {
+                // When going to 0, show 100% decrease
+                pct = 100
+                up = false
+              } else {
+                // Normal calculation with 1-100% cap
+                up = curr >= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
               }
-              if (last > 0 && curr === 0) {
-                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↓ 100%</span>
-              }
-              const up = curr >= last
-              const pct = Math.abs(((curr - last) / last) * 100)
+              
               return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full self-center', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                <span className={clsx('text-xs px-2 py-1 rounded-full', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {up ? '↑' : '↓'} {pct.toFixed(1)}%
                 </span>
               )
             })()}
           </div>
-          <div className="mt-2 text-xs text-gray-500">Registered this month</div>
+          <div className="mt-4 text-xs text-gray-500">Registered this month</div>
         </div>
 
         {/* Maintenance Requests */}
@@ -507,33 +674,42 @@ export default function AdminDashboard() {
               <Wrench className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">{stats.maintenanceThisMonth}</div>
+          <div className="mt-3 flex items-center gap-6">
+            <div className="text-4xl font-semibold leading-none">{stats.maintenanceThisMonth}</div>
             {(() => {
               const last = stats.maintenanceLastMonth
               const curr = stats.maintenanceThisMonth
               if (last === 0 && curr === 0) {
                 return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
               }
+              
+              let pct: number
+              let isGood: boolean // For maintenance, fewer is better
+              
               if (last === 0 && curr > 0) {
                 // For maintenance requests, increase from 0 is bad (red)
-                return <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">↑ 100%</span>
-              }
-              if (last > 0 && curr === 0) {
+                pct = 100
+                isGood = false
+              } else if (last > 0 && curr === 0) {
                 // For maintenance requests, decrease to 0 is good (green)
-                return <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">↓ 100%</span>
+                pct = 100
+                isGood = true
+              } else {
+                // Normal calculation with 1-100% cap
+                // For maintenance requests, fewer is better
+                isGood = curr <= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
               }
-              // For maintenance requests, fewer is better
-              const fewer = curr <= last
-              const pct = Math.abs(((curr - last) / last) * 100)
+              
               return (
-                <span className={clsx('text-xs px-2 py-1 rounded-full self-center', fewer ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                <span className={clsx('text-xs px-2 py-1 rounded-full', isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {curr > last ? '↑' : '↓'} {pct.toFixed(1)}%
                 </span>
               )
             })()}
           </div>
-          <div className="mt-2 text-xs text-gray-500">Requests submitted this month</div>
+          <div className="mt-4 text-xs text-gray-500">Requests submitted this month</div>
         </div>
 
         {/* Total Units */}
@@ -544,10 +720,10 @@ export default function AdminDashboard() {
               <Building className="h-5 w-5 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">{stats.totalUnits}</div>
+          <div className="mt-3 flex items-center gap-6">
+            <div className="text-4xl font-semibold leading-none">{stats.totalUnits}</div>
           </div>
-          <div className="mt-2 text-xs text-gray-500">Occupancy: {occupancyRate.toFixed(1)}%</div>
+          <div className="mt-4 text-xs text-gray-500">Occupancy: {occupancyRate.toFixed(1)}%</div>
         </div>
       </div>
 
@@ -558,8 +734,22 @@ export default function AdminDashboard() {
         {/* Area Chart with Gradient */}
         <Card>
           <CardHeader>
-            <CardTitle>New Tenants & Leases</CardTitle>
-            <CardDescription>LAST 7 DAYS</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>New Tenants & Leases</CardTitle>
+              </div>
+              <div className="w-32">
+                <Select 
+                  value={dateRangePeriod} 
+                  onChange={setDateRangePeriod}
+                  className="h-8 text-xs"
+                >
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="year">This Year</option>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
             <ResponsiveContainer width="100%" height={280}>
@@ -633,8 +823,8 @@ export default function AdminDashboard() {
         {/* Property Overview Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Property Overview</CardTitle>
-            <CardDescription>UNITS & PAYMENTS STATUS</CardDescription>
+            <CardTitle className="mb-1">Property Overview</CardTitle>
+            <CardDescription>Units & Payments Status</CardDescription>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
             <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-12 mt-6">
@@ -660,6 +850,13 @@ export default function AdminDashboard() {
                         `${props.payload?.count || value}`,
                         name
                       ]}
+                      cursor={false}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -687,8 +884,39 @@ export default function AdminDashboard() {
       {/* Recent Payments */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Payments</CardTitle>
-          <CardDescription>Latest payment transactions</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="mb-1">Recent Payments</CardTitle>
+              <CardDescription>Latest payment transactions</CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9"
+                />
+              </div>
+              <div className="w-48">
+                <Select 
+                  value={sortBy} 
+                  onChange={setSortBy}
+                  className="h-9"
+                >
+                  <option value="date_desc">Date (Newest First)</option>
+                  <option value="date_asc">Date (Oldest First)</option>
+                  <option value="amount_desc">Amount (High to Low)</option>
+                  <option value="amount_asc">Amount (Low to High)</option>
+                  <option value="tenant_name">Tenant Name (A-Z)</option>
+                  <option value="unit_number">Unit Number</option>
+                  <option value="status">Status</option>
+                  <option value="method">Payment Method</option>
+                </Select>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -697,6 +925,12 @@ export default function AdminDashboard() {
                 <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Payments Yet</h3>
                 <p className="text-gray-500 dark:text-gray-400">Payment transactions will appear here once tenants start making payments.</p>
+              </div>
+            ) : filteredAndSortedPayments.length === 0 ? (
+              <div className="text-center py-8">
+                <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Results Found</h3>
+                <p className="text-gray-500 dark:text-gray-400">Try adjusting your search terms or filters.</p>
               </div>
             ) : (
               <table className="w-full">
@@ -713,7 +947,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentPayments.map((payment, index) => (
+                  {filteredAndSortedPayments.map((payment, index) => (
                     <tr key={payment.id} className="border-b">
                       <td className="p-2 text-sm">{String(index + 1).padStart(2, '0')}</td>
                       <td className="p-2 text-sm">#{String(payment.id).slice(0, 8)}</td>
