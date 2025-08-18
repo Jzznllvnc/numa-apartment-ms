@@ -208,4 +208,43 @@
   }
 }
 
+/* Global Print Styles - Fix for dark theme printing issues */
+@media print {
+  @page {
+    margin: 0.5in;
+    size: auto;
+  }
+  
+  /* Hide unnecessary elements during print */
+  nav, header, footer, .no-print, 
+  button:not(.print-button), 
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  /* Only fix dark mode - leave light mode completely alone */
+  .dark {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  .dark html, .dark body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  .dark * {
+    color: black !important;
+    background-color: white !important;
+  }
+  
+  .dark .border,
+  .dark .border-t,
+  .dark .border-b,
+  .dark .border-l,
+  .dark .border-r {
+    border-color: black !important;
+  }
+}
+
 

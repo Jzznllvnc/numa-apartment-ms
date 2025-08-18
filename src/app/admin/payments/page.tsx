@@ -656,26 +656,75 @@ export default function PaymentsManagement() {
         <style jsx>{`
           @media print {
             @page {
-              margin: 0;
+              margin: 0.5in;
               size: auto;
               -webkit-print-color-adjust: exact;
+              color-adjust: exact;
             }
-            body {
-              -webkit-print-color-adjust: exact;
-              margin: 0;
-              padding: 0;
-            }
-            * {
-              -webkit-print-color-adjust: exact;
-            }
-            .fixed.inset-0.z-\\[100\\] .px-6.py-4.border-b button {
+            
+            /* Hide interactive elements */
+            button, 
+            .print\\:hidden,
+            .absolute.right-4.top-4,
+            nav, header, footer {
               display: none !important;
             }
-            .flex.items-center.justify-between button {
-              display: none !important;
+            
+            /* Ensure proper page layout */
+            .max-w-2xl {
+              max-width: 100% !important;
+              margin: 0 !important;
             }
-            button.h-8.w-8.p-0 {
-              display: none !important;
+            
+            .p-6 {
+              padding: 1rem !important;
+            }
+            
+            /* Only override dark mode colors - leave light mode alone */
+            .dark {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            
+            .dark html, 
+            .dark body {
+              background-color: white !important;
+              color: black !important;
+            }
+            
+            .dark * {
+              background-color: white !important;
+              color: black !important;
+            }
+            
+            .dark .border,
+            .dark .border-2,
+            .dark .border-gray-800,
+            .dark .border-gray-300 {
+              border-color: black !important;
+            }
+            
+            /* For dark mode modal overlays */
+            .dark .fixed.inset-0 {
+              background-color: white !important;
+            }
+            
+            /* Light mode - minimal changes, just ensure visibility */
+            html:not(.dark), 
+            body:not(.dark) {
+              background-color: white !important;
+              color: black !important;
+            }
+            
+            /* Ensure borders are visible in both modes */
+            .border-2 {
+              border-width: 2px !important;
+              border-style: solid !important;
+            }
+            
+            .border-gray-800,
+            .dark\\:border-gray-300 {
+              border-color: #000000 !important;
             }
           }
         `}</style>
@@ -739,10 +788,6 @@ export default function PaymentsManagement() {
                 </div>
                 )}
               </div>
-            </div>
-            
-            <div className="text-center text-gray-500 dark:text-gray-400 print:text-black text-xs print:text-sm">
-              <p>Receipt generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
             </div>
           </div>
           
