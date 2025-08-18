@@ -1169,14 +1169,14 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Combined Occupied Units & Announcements Card */}
-          <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6">
+          <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6 lg:h-[35.7rem]">
             {/* Occupied Units Section */}
-            <div className="mb-16">
+            <div className="mb-8">
               <div className="mb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Occupied Units</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Recently occupied units</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Recently occupied units</p>
                   </div>
                   <button
                     onClick={() => router.push('/admin/units')}
@@ -1220,7 +1220,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Announcements</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Recent property announcements</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Recent property announcements</p>
                   </div>
                   <button
                     onClick={() => router.push('/admin/announcements')}
@@ -1240,7 +1240,7 @@ export default function AdminDashboard() {
                   recentAnnouncements.slice(0, 3).map((announcement, index) => (
                     <div key={announcement.id} className="flex items-start">
                       <div className="flex items-start gap-3 flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 mr-2">
                           <Megaphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1 min-w-0">
