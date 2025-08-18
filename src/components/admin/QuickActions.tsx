@@ -56,7 +56,7 @@ export function QuickActions({
     return (
       <Button onClick={onAddMaintenance} size="sm">
         <Plus className="h-4 w-4 mr-2" />
-        New Request
+        New
       </Button>
     )
   }
@@ -74,7 +74,7 @@ export function QuickActions({
     return (
       <Button onClick={onAddAnnouncement} size="sm">
         <Plus className="h-4 w-4 mr-2" />
-        New Announcement
+        New
       </Button>
     )
   }

@@ -16,6 +16,7 @@ import { useAlerts } from '@/components/ui/alerts'
 import { Oleo_Script } from 'next/font/google'
 import ChatSystem from '@/components/chat/ChatSystem'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
+import { Save } from 'lucide-react'
 const oleo = Oleo_Script({ subsets: ['latin'], weight: '400' })
 
 // Hoisted components to keep stable identity and avoid state resets
@@ -583,6 +584,7 @@ function ProfileEditor({ user, onBack, refreshParent }: { user: User | null; onB
               disabled={saving} 
               className="text-white hover:bg-blue-700 bg-blue-600"
             >
+            <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : (pendingAvatarPath ? 'Save Profile & Avatar' : 'Save Profile')}
             </Button>
           </form>
@@ -962,9 +964,7 @@ export default function TenantDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Status:</span>
-                        <span className="text-sm">
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Active</span>
-                        </span>
+                        <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-3 py-1 rounded-full text-xs font-medium">Active</span>
                       </div>
                     </div>
                   ) : (
@@ -1057,10 +1057,10 @@ export default function TenantDashboard() {
                         <div key={request.id} className="border rounded-lg p-3">
                           <div className="flex justify-between items-start mb-2">
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{request.request_details}</p>
-                            <span className={`${'px-2 py-1 rounded-full text-xs '} ${
-                              request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              request.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              request.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' :
+                              request.status === 'in_progress' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' :
+                              'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300'
                             }`}>
                               {request.status.replace('_', ' ')}
                             </span>

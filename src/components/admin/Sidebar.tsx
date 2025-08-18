@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Tooltip } from '@/components/ui/Tooltip'
 import Image from 'next/image'
 import { Oleo_Script } from 'next/font/google'
 import { 
@@ -103,7 +104,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <>
       {/* Mobile menu button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
+      <div className="lg:hidden fixed top-8 left-4 z-50">
         <Button
           variant="outline"
           size="sm"
@@ -131,7 +132,7 @@ export function Sidebar({ className }: SidebarProps) {
       )} style={{ willChange: 'width, transform' }}>
         <div className="relative flex flex-col h-full max-h-screen">
           {/* Header */}
-          <div className={cn("flex items-center justify-between px-6 h-[72px] border-b border-gray-200 dark:border-gray-700", isCollapsed && 'justify-center') }>
+          <div className={cn("flex items-center justify-between px-6 h-[96px]", isCollapsed && 'justify-center') }>
             <div className={cn("flex items-center", isCollapsed && 'justify-center w-full') }>
               <Image
                 src="/ams.png"
@@ -163,7 +164,7 @@ export function Sidebar({ className }: SidebarProps) {
             onClick={toggleCollapse}
             className={cn(
               'hidden lg:flex absolute items-center justify-center rounded-full p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow transition-all',
-              isCollapsed ? '-right-3 top-[1.5rem]' : '-right-3 top-[1.5rem]'
+              isCollapsed ? '-right-3 top-[2.25rem]' : '-right-3 top-[2.25rem]'
             )}
           >
             {isCollapsed ? (
@@ -180,32 +181,44 @@ export function Sidebar({ className }: SidebarProps) {
               'px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400',
               isCollapsed && 'hidden'
             )}>
-              Navigation
+              Management
             </div>
             {navigation.map((item) => {
               const Icon = item.icon
               const active = isActive(item.href, item.exact)
               
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={cn(
-                    'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
-                    isCollapsed ? 'justify-center' : '',
-                    active
-                      ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-r-2 border-blue-700 dark:border-blue-400'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                <div key={item.name} className="relative">
+                  {/* Active indicator line on far left - clips at screen edge */}
+                  {active && (
+                    <div className="absolute -left-4 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-blue-600"></div>
                   )}
-                  title={item.name}
-                >
-                  <Icon className={cn(
-                    isCollapsed ? 'h-5 w-5' : 'mr-3 h-5 w-5',
-                    active ? 'text-blue-700 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'
-                  )} />
-                  {!isCollapsed && <span className="flex-1">{item.name}</span>}
-                </Link>
+                  
+                  <Tooltip
+                    content={item.name}
+                    side="right"
+                    delay={300}
+                    disabled={!isCollapsed}
+                  >
+                    <Link
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center px-3 py-2 ml-1 text-sm font-medium rounded-lg transition-colors relative w-full',
+                        isCollapsed ? 'justify-center ml-1' : '',
+                        active
+                          ? 'bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                      )}
+                    >
+                      <Icon className={cn(
+                        isCollapsed ? 'h-5 w-5' : 'mr-3 h-5 w-5',
+                        active ? 'text-blue-700 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'
+                      )} />
+                      {!isCollapsed && <span className="flex-1">{item.name}</span>}
+                    </Link>
+                  </Tooltip>
+                </div>
               )
             })}
           </nav>

@@ -15,18 +15,18 @@ function generatePageTitle(pathname: string): string {
   if (segments.length >= 2 && segments[0] === 'admin') {
     const section = segments[1]
     switch (section) {
-      case 'units': return 'Units'
-      case 'tenants': return 'Tenants'  
-      case 'leases': return 'Leases'
-      case 'payments': return 'Payments'
-      case 'maintenance': return 'Maintenance'
-      case 'announcements': return 'Announcements'
+      case 'units': return 'Unit Spaces'
+      case 'tenants': return 'Tenant Profiles'  
+      case 'leases': return 'Lease Agreements'
+      case 'payments': return 'Payment Records'
+      case 'maintenance': return 'Maintenance Requests'
+      case 'announcements': return 'Announcements Board'
       case 'settings': return 'Settings'
       default: return section.charAt(0).toUpperCase() + section.slice(1)
     }
   }
   
-  return 'Dashboard'
+  return 'Apartment Overview'
 }
 
 interface ContentWrapperProps {
@@ -42,7 +42,7 @@ export function ContentWrapper({ children }: ContentWrapperProps) {
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
-      <div className="flex flex-col sm:flex-row sm:items-center mb-4 sm:mb-6 gap-3">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
         {/* Page Title */}
         <div className="flex-shrink-0">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 font-poppins">
@@ -52,7 +52,7 @@ export function ContentWrapper({ children }: ContentWrapperProps) {
         
         {/* Quick Actions */}
         {shouldShowQuickActions && (
-          <div className="flex-shrink-0 ml-auto">
+          <div className="flex-shrink-0">
             <QuickActions 
               onAddUnit={actions.onAddUnit}
               onAddTenant={actions.onAddTenant}

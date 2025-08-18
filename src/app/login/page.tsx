@@ -67,7 +67,6 @@ export default function Login() {
         }
 
         // Get user role to redirect to appropriate dashboard
-        console.log('User authenticated, fetching role...')
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('role')

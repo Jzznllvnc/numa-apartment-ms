@@ -21,6 +21,7 @@ interface Payment {
   payment_date: string
   payment_for_month: string
   payment_method: string | null
+  status: string | null
   notes: string | null
   created_at: string
   leases: {
@@ -40,6 +41,7 @@ interface PaymentFormData {
   payment_date: string
   payment_for_month: string
   payment_method: string
+  status: string
   notes: string
 }
 
@@ -79,6 +81,7 @@ export default function PaymentsManagement() {
     payment_date: new Date().toISOString().split('T')[0],
     payment_for_month: new Date().toISOString().split('T')[0].slice(0, 7),
     payment_method: 'Bank Transfer',
+    status: 'Paid',
     notes: ''
   })
   const [error, setError] = useState('')
@@ -176,6 +179,7 @@ export default function PaymentsManagement() {
       payment_date: new Date().toISOString().split('T')[0],
       payment_for_month: new Date().toISOString().split('T')[0].slice(0, 7),
       payment_method: 'Bank Transfer',
+      status: 'Paid',
       notes: ''
     })
     setShowFormModal(true)
@@ -204,6 +208,7 @@ export default function PaymentsManagement() {
         payment_date: formData.payment_date,
         payment_for_month: formData.payment_for_month + '-01',
         payment_method: formData.payment_method,
+        status: formData.status,
         notes: formData.notes || null
       }
 
@@ -243,6 +248,7 @@ export default function PaymentsManagement() {
       payment_date: payment.payment_date,
       payment_for_month: payment.payment_for_month.slice(0, 7),
       payment_method: payment.payment_method || 'Bank Transfer',
+      status: payment.status || 'Paid',
       notes: payment.notes || ''
     })
     setShowFormModal(true)
@@ -284,6 +290,21 @@ export default function PaymentsManagement() {
     setShowFormModal(false)
     setEditingPayment(null)
     setError('')
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+      case 'partial':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+      case 'late':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+      case 'cancelled':
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300'
+      default:
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+    }
   }
 
   const filteredLeases = formData.tenant_id
@@ -384,6 +405,7 @@ export default function PaymentsManagement() {
                       </div>
                     </th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Notes</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Actions</th>
                   </tr>
                 </thead>
@@ -417,6 +439,11 @@ export default function PaymentsManagement() {
                         <div className="text-sm text-gray-900 dark:text-gray-100 max-w-xs truncate">
                           {payment.notes || '—'}
                         </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(payment.status || '')}`}>
+                          {payment.status || 'N/A'}
+                        </span>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex gap-2">
@@ -604,6 +631,23 @@ export default function PaymentsManagement() {
                 <option value="Check">Check</option>
                 <option value="Credit Card">Credit Card</option>
                 <option value="Online Payment">Online Payment</option>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Status
+              </label>
+              <Select
+                value={formData.status}
+                onChange={(value) => setFormData({ ...formData, status: value })}
+                placeholder="Select status"
+                required
+              >
+                <option value="Paid">Paid</option>
+                <option value="Partial">Partial</option>
+                <option value="Late">Late</option>
+                <option value="Cancelled">Cancelled</option>
               </Select>
             </div>
 

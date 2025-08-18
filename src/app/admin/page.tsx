@@ -98,12 +98,67 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [sortBy, setSortBy] = useState<string>('date_desc')
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false)
+  const [tooltipStyles, setTooltipStyles] = useState<any>({})
   const filterDropdownRef = React.useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
+  const updateTooltipStyles = () => {
+    const isDark = document.documentElement.classList.contains('dark')
+    setTooltipStyles({
+      backgroundColor: isDark ? '#1f2937' : '#ffffff',
+      color: isDark ? '#ffffff' : '#111827',
+      border: `1px solid ${isDark ? '#374151' : '#e5e7eb'}`,
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06)',
+    })
+  }
+
+  // Status color function for dashboard payments
+  const getPaymentStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+      case 'partial':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+      case 'late':
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+      case 'cancelled':
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300'
+      default:
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+    }
+  }
+
+  const getTooltipLabelStyle = () => {
+    const isDark = document.documentElement.classList.contains('dark')
+    return {
+      color: isDark ? '#ffffff' : '#111827',
+    }
+  }
+
+  const getTooltipItemStyle = () => {
+    const isDark = document.documentElement.classList.contains('dark')
+    return {
+      color: isDark ? '#ffffff' : '#111827',
+    }
+  }
+
   useEffect(() => {
     fetchDashboardStats()
+    updateTooltipStyles()
+    
+    // Listen for theme changes
+    const observer = new MutationObserver(() => {
+      updateTooltipStyles()
+    })
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -544,7 +599,7 @@ export default function AdminDashboard() {
           amount_paid: payment.amount_paid,
           payment_date: payment.payment_date,
           payment_method: payment.payment_method || 'Bank Transfer',
-          status: payment.status || 'completed',
+          status: payment.status || 'Paid',
           tenant_name: tenantMap.get(payment.tenant_id) || 'Unknown Tenant',
           unit_number: unitNumber || 'No Unit Assigned'
         }
@@ -700,7 +755,7 @@ export default function AdminDashboard() {
       {/* Main Grid Layout: Left Column (KPIs + Main Cards) + Right Column (Property Overview + Side Cards) */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column: KPI Cards + Main Content */}
-        <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+        <div className="xl:col-span-2 space-y-4 sm:space-y-6 flex flex-col">
           {/* 3 KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Revenue (payments) */}
@@ -718,7 +773,7 @@ export default function AdminDashboard() {
                 const last = stats.revenueLastMonth
                 const curr = stats.revenueThisMonth
                 if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
                 }
                 
                 let pct: number
@@ -740,7 +795,7 @@ export default function AdminDashboard() {
                 }
                 
                 return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
                     {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
                     {pct.toFixed(1)}%
                   </span>
@@ -766,7 +821,7 @@ export default function AdminDashboard() {
                 const last = stats.newTenantsLastMonth
                 const curr = stats.newTenantsThisMonth
                 if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
                 }
                 
                 let pct: number
@@ -788,7 +843,7 @@ export default function AdminDashboard() {
                 }
                 
                 return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
                     {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
                     {pct.toFixed(1)}%
                   </span>
@@ -814,7 +869,7 @@ export default function AdminDashboard() {
                 const last = stats.maintenanceLastMonth
                 const curr = stats.maintenanceThisMonth
                 if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">No data</span>
+                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
                 }
                 
                 let pct: number
@@ -837,7 +892,7 @@ export default function AdminDashboard() {
                 }
                 
                 return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1', isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', isGood ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
                     {curr > last ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
                     {pct.toFixed(1)}%
                   </span>
@@ -899,12 +954,7 @@ export default function AdminDashboard() {
                 />
                 <Tooltip 
                   cursor={false}
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  }}
+                  contentStyle={tooltipStyles}
                 />
                 <Area 
                   type="monotone" 
@@ -940,8 +990,8 @@ export default function AdminDashboard() {
         </Card>
 
           {/* Recent Payments Card */}
-      <Card>
-        <CardHeader>
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="mb-1">Recent Payments</CardTitle>
@@ -1042,22 +1092,22 @@ export default function AdminDashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
+        <CardContent className="flex-1 flex flex-col">
+          <div className="overflow-x-auto -mx-2 sm:mx-0 flex-1">
             {recentPayments.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 flex-1 flex flex-col justify-center">
                 <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Payments Yet</h3>
                 <p className="text-gray-500 dark:text-gray-400">Payment transactions will appear here once tenants start making payments.</p>
               </div>
             ) : filteredAndSortedPayments.length === 0 ? (
-              <div className="text-center py-8">
+              <div className="text-center py-8 flex-1 flex flex-col justify-center">
                 <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Results Found</h3>
                 <p className="text-gray-500 dark:text-gray-400">Try adjusting your search terms or filters.</p>
               </div>
             ) : (
-              <table className="w-full min-w-[600px]">
+              <table className="w-full min-w-[600px] h-full">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">NO</th>
@@ -1071,7 +1121,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAndSortedPayments.map((payment, index) => (
+                  {filteredAndSortedPayments.slice(0, 5).map((payment, index) => (
                     <tr key={payment.id} className="border-b">
                       <td className="p-2 text-xs sm:text-sm">{String(index + 1).padStart(2, '0')}</td>
                       <td className="p-2 text-xs sm:text-sm">#{String(payment.id).slice(0, 8)}</td>
@@ -1084,13 +1134,8 @@ export default function AdminDashboard() {
                       <td className="p-2 text-xs sm:text-sm">{new Date(payment.payment_date).toLocaleDateString()}</td>
                       <td className="p-2 text-xs sm:text-sm">{payment.payment_method}</td>
                       <td className="p-2 text-xs sm:text-sm">
-                        <span className={clsx('px-2 py-1 rounded-full text-xs', {
-                          'bg-green-100 text-green-800': payment.status === 'completed',
-                          'bg-yellow-100 text-yellow-800': payment.status === 'pending',
-                          'bg-red-100 text-red-800': payment.status === 'failed' || payment.status === 'rejected',
-                          'bg-blue-100 text-blue-800': payment.status === 'processing'
-                        })}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                        <span className={clsx('px-3 py-1 rounded-full text-xs font-medium', getPaymentStatusColor(payment.status || 'Paid'))}>
+                          {payment.status || 'Paid'}
                         </span>
                       </td>
                       <td className="p-2 text-xs sm:text-sm font-medium">${parseFloat(payment.amount_paid || '0').toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
@@ -1105,16 +1150,14 @@ export default function AdminDashboard() {
 
         </div>
 
-        {/* Right Column: Property Overview + Side Cards */}
+        {/* Right Column: Lease Overview + Side Cards */}
         <div className="space-y-4 sm:space-y-6">
-          {/* Property Overview Chart */}
           <Card className="h-[29.3rem] rounded-2xl">
             <CardHeader>
-              <CardTitle>Property Overview</CardTitle>
+              <CardTitle>Lease Overview</CardTitle>
               <CardDescription>Units & Payments Status</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center -mt-5">
-              {/* Pie Chart - centered and moved up */}
               <div className="flex justify-center items-center mb-2">
                 <PieChart width={300} height={280}>
                   <Pie
@@ -1138,17 +1181,13 @@ export default function AdminDashboard() {
                       name
                     ]}
                     cursor={false}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    }}
+                    contentStyle={tooltipStyles}
+                    labelStyle={getTooltipLabelStyle()}
+                    itemStyle={getTooltipItemStyle()}
                   />
                 </PieChart>
               </div>
               
-              {/* Legends - single horizontal line below chart with proper spacing */}
               <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-3 w-full px-2 pb-4">
                 {propertyOverviewData.map((item, index) => (
                   <div key={index} className="flex items-center text-xs">
@@ -1204,7 +1243,7 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500">{unit.tenant_name}</p>
                         </div>
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Active</span>
+                      <span className="text-xs px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">Active</span>
                     </div>
                   ))
                 )}
@@ -1261,8 +1300,7 @@ export default function AdminDashboard() {
         </div>
 
       </div>
-
-      {/* Bottom padding for proper scroll */}
+      
       <div className="h-8"></div>
     </div>
   )
