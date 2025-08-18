@@ -380,7 +380,7 @@ const ChatConversationView: React.FC<ChatConversationViewProps> = ({
 
                 {/* Message */}
                 <div className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
+                  <div className={`max-w-[60%] sm:max-w-xs px-3 py-2 rounded-lg ${
                     isCurrentUser
                       ? 'bg-blue-600 dark:bg-blue-500 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'

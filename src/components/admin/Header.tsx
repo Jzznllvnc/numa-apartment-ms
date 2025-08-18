@@ -548,6 +548,17 @@ function SearchBar() {
       <form onSubmit={handleSearch} className="relative">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Mobile search input */}
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => searchQuery && setShowResults(true)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search..."
+            className="pl-10 pr-4 py-2 w-32 bg-gray-100 dark:bg-gray-800 border-0 rounded-full text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-200 lg:hidden"
+          />
+          {/* Desktop search input */}
           <input
             type="text"
             value={searchQuery}
@@ -555,7 +566,7 @@ function SearchBar() {
             onFocus={() => searchQuery && setShowResults(true)}
             onKeyDown={handleKeyDown}
             placeholder="Search pages, units, tenants..."
-            className="pl-10 pr-4 py-2 w-80 lg:w-96 bg-gray-100 dark:bg-gray-800 border-0 rounded-full text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-200"
+            className="pl-10 pr-4 py-2 w-80 bg-gray-100 dark:bg-gray-800 border-0 rounded-full text-sm placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-200 hidden lg:block"
           />
         </div>
       </form>
@@ -617,13 +628,18 @@ export function AdminHeader() {
   return (
     <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-6 lg:px-8 h-[72px] flex items-center shadow-sm dark:bg-gray-900/95 dark:border-gray-700">
       <div className="flex items-center justify-between w-full">
-        {/* Left side - Search Bar */}
-        <div className="flex-shrink-0">
+        {/* Left side - Empty on mobile, Search Bar on larger screens */}
+        <div className="flex-shrink-0 hidden lg:block">
           <SearchBar />
         </div>
 
-        {/* Right side - Settings, Theme, Notifications, Profile */}
-        <div className="flex items-center space-x-3">
+        {/* Right side - Search (mobile), Theme, Notifications, Profile */}
+        <div className="flex items-center space-x-3 ml-auto lg:ml-0">
+          
+          {/* Mobile Search Bar - beside theme toggle */}
+          <div className="lg:hidden">
+            <SearchBar />
+          </div>
           
           {/* Theme Toggle */}
           <ThemeToggle />

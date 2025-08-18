@@ -446,7 +446,7 @@ export default function AdminDashboard() {
           name: 'Vacant Units',
           value: Math.round((vacantUnits / totalUnits) * 100),
           count: vacantUnits,
-          color: '#3b82f6'
+          color: '#00ffc8'
         })
       }
 
@@ -698,11 +698,11 @@ export default function AdminDashboard() {
     <div className="min-h-full">
 
       {/* Main Grid Layout: Left Column (KPIs + Main Cards) + Right Column (Property Overview + Side Cards) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column: KPI Cards + Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="xl:col-span-2 space-y-4 sm:space-y-6">
           {/* 3 KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Revenue (payments) */}
         <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
           <div className="flex items-start justify-between mb-2">
@@ -947,14 +947,22 @@ export default function AdminDashboard() {
               <CardTitle className="mb-1">Recent Payments</CardTitle>
               <CardDescription>Latest payment transactions</CardDescription>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="relative w-64">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="relative w-32 sm:w-40 lg:w-56">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                {/* Mobile search input */}
                 <Input
                   placeholder="Search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-9 focus-visible:ring-blue-500"
+                  className="pl-10 h-9 focus-visible:ring-blue-500 lg:hidden"
+                />
+                {/* Desktop search input */}
+                <Input
+                  placeholder="Search payments, tenants..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 focus-visible:ring-blue-500 hidden lg:block truncate"
                 />
               </div>
                   <div className="relative" ref={filterDropdownRef}>
@@ -965,11 +973,11 @@ export default function AdminDashboard() {
                       className="h-9 px-3 flex items-center gap-2"
                     >
                       <ListFilter className="h-4 w-4" />
-                      Filter
+                      <span className="hidden sm:inline">Filter</span>
                       <ChevronDown className={clsx("h-4 w-4 transition-transform duration-200", isFilterDropdownOpen && "rotate-180")} />
                     </Button>
                     {isFilterDropdownOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                           <div className="py-1">
                             <button
                               onClick={() => { setSortBy('date_desc'); setIsFilterDropdownOpen(false); }}
@@ -1035,7 +1043,7 @@ export default function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
             {recentPayments.length === 0 ? (
               <div className="text-center py-8">
                 <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -1049,33 +1057,33 @@ export default function AdminDashboard() {
                 <p className="text-gray-500 dark:text-gray-400">Try adjusting your search terms or filters.</p>
               </div>
             ) : (
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">NO</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">PAYMENT ID</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">TENANT NAME</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">UNIT NUMBER</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">DATE</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">METHOD</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">STATUS</th>
-                    <th className="text-left p-2 text-sm font-medium text-gray-500">AMOUNT</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">NO</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">PAYMENT ID</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">TENANT NAME</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">UNIT NUMBER</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">DATE</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">METHOD</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">STATUS</th>
+                    <th className="text-left p-2 text-xs sm:text-sm font-medium text-gray-500">AMOUNT</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredAndSortedPayments.map((payment, index) => (
                     <tr key={payment.id} className="border-b">
-                      <td className="p-2 text-sm">{String(index + 1).padStart(2, '0')}</td>
-                      <td className="p-2 text-sm">#{String(payment.id).slice(0, 8)}</td>
-                      <td className="p-2 text-sm">{payment.tenant_name}</td>
-                      <td className="p-2 text-sm">{
+                      <td className="p-2 text-xs sm:text-sm">{String(index + 1).padStart(2, '0')}</td>
+                      <td className="p-2 text-xs sm:text-sm">#{String(payment.id).slice(0, 8)}</td>
+                      <td className="p-2 text-xs sm:text-sm">{payment.tenant_name}</td>
+                      <td className="p-2 text-xs sm:text-sm">{
                         payment.unit_number === 'No Unit Assigned' 
                           ? payment.unit_number 
                           : `Unit ${payment.unit_number}`
                       }</td>
-                      <td className="p-2 text-sm">{new Date(payment.payment_date).toLocaleDateString()}</td>
-                      <td className="p-2 text-sm">{payment.payment_method}</td>
-                      <td className="p-2 text-sm">
+                      <td className="p-2 text-xs sm:text-sm">{new Date(payment.payment_date).toLocaleDateString()}</td>
+                      <td className="p-2 text-xs sm:text-sm">{payment.payment_method}</td>
+                      <td className="p-2 text-xs sm:text-sm">
                         <span className={clsx('px-2 py-1 rounded-full text-xs', {
                           'bg-green-100 text-green-800': payment.status === 'completed',
                           'bg-yellow-100 text-yellow-800': payment.status === 'pending',
@@ -1085,7 +1093,7 @@ export default function AdminDashboard() {
                           {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                         </span>
                       </td>
-                      <td className="p-2 text-sm">${parseFloat(payment.amount_paid || '0').toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
+                      <td className="p-2 text-xs sm:text-sm font-medium">${parseFloat(payment.amount_paid || '0').toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1098,7 +1106,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right Column: Property Overview + Side Cards */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Property Overview Chart */}
           <Card className="h-[29.3rem] rounded-2xl">
             <CardHeader>
@@ -1107,17 +1115,18 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="flex flex-col items-center -mt-5">
               {/* Pie Chart - centered and moved up */}
-              <div className="flex justify-center items-center mb-4">
-                <PieChart width={300} height={300}>
+              <div className="flex justify-center items-center mb-2">
+                <PieChart width={300} height={280}>
                   <Pie
                     data={propertyOverviewData}
                     cx={150}
-                    cy={150}
+                    cy={140}
                     innerRadius={45}
                     outerRadius={90}
                     paddingAngle={4}
                     cornerRadius={6}
                     dataKey="value"
+                    stroke="none"
                   >
                     {propertyOverviewData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -1140,7 +1149,7 @@ export default function AdminDashboard() {
               </div>
               
               {/* Legends - single horizontal line below chart with proper spacing */}
-              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 w-full px-2 pb-2">
+              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 w-full px-2 pb-4">
                 {propertyOverviewData.map((item, index) => (
                   <div key={index} className="flex items-center text-xs">
                     <div 
@@ -1162,7 +1171,7 @@ export default function AdminDashboard() {
           {/* Combined Occupied Units & Announcements Card */}
           <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6">
             {/* Occupied Units Section */}
-            <div className="mb-6">
+            <div className="mb-16">
               <div className="mb-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1229,15 +1238,17 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   recentAnnouncements.slice(0, 3).map((announcement, index) => (
-                    <div key={announcement.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-5">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <div key={announcement.id} className="flex items-start">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
                           <Megaphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{announcement.title}</p>
-                          <p className="text-xs text-gray-500">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
-                          <p className="text-xs text-gray-400">{formatTimeAgo(announcement.created_at)}</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate pr-2">{announcement.title}</p>
+                            <p className="text-xs text-gray-400 whitespace-nowrap ml-2 mt-0.5">{formatTimeAgo(announcement.created_at)}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 leading-relaxed mt-1">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
                         </div>
                       </div>
                     </div>

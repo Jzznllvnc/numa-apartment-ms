@@ -6,7 +6,7 @@ import { User, ChatConversation } from '@/types/database';
 import TenantList from '@/components/chat/TenantList';
 import ChatConversationView from '@/components/chat/ChatConversationView';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
-import { MessageCircleMore, ArrowLeft, X, MoreHorizontal } from 'lucide-react';
+import { MessageCircleMore, ArrowLeft, X, MoreHorizontal, MessageCircleOff } from 'lucide-react';
 
 interface ChatPopupProps {
   isOpen: boolean;
@@ -251,10 +251,10 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
                 onClick={handleBackToList}
                 className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-5 h-5 mr-1" />
               </button>
             )}
-            <MessageCircleMore className="w-5 h-5" />
+            <MessageCircleMore className="w-6 h-6" />
             <h3 className="font-medium text-white">
               {loading
                 ? 'Loading...'
@@ -268,7 +268,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
               }
             </h3>
           </div>
-          <div className="flex items-center space-x-1 relative">
+          <div className="flex items-center space-x-2 relative">
             {view === 'conversation' && selectedConversation && (
               <div className="relative">
                 <button
@@ -276,7 +276,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
                   className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
                   disabled={clearing}
                 >
-                  <MoreHorizontal className="w-4 h-4" />
+                  <MoreHorizontal className="w-5 h-5" />
                 </button>
                 
                 {showDropdown && (
@@ -292,8 +292,9 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
                       <button
                         onClick={clearChat}
                         disabled={clearing}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
+                        <MessageCircleOff className="w-4 h-4" />
                         {clearing ? 'Clearing...' : 'Clear chat'}
                       </button>
                     </div>
@@ -305,7 +306,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
               onClick={onClose}
               className="hover:bg-blue-700 dark:hover:bg-blue-600 p-1 rounded transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>

@@ -28,8 +28,8 @@ export function QuickActions({
   if (pathname === '/admin/units' && onAddUnit) {
     return (
       <Button onClick={onAddUnit} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">Add Unit</span>
+        <Plus className="h-4 w-4 mr-2" />
+        Add Unit
       </Button>
     )
   }
@@ -37,8 +37,8 @@ export function QuickActions({
   if (pathname === '/admin/tenants' && onAddTenant) {
     return (
       <Button onClick={onAddTenant} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">Add Tenant</span>
+        <Plus className="h-4 w-4 mr-2" />
+        Add Tenant
       </Button>
     )
   }
@@ -46,8 +46,8 @@ export function QuickActions({
   if (pathname === '/admin/leases' && onAddLease) {
     return (
       <Button onClick={onAddLease} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">New Lease</span>
+        <Plus className="h-4 w-4 mr-2" />
+        New Lease
       </Button>
     )
   }
@@ -55,8 +55,8 @@ export function QuickActions({
   if (pathname === '/admin/maintenance' && onAddMaintenance) {
     return (
       <Button onClick={onAddMaintenance} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">New Request</span>
+        <Plus className="h-4 w-4 mr-2" />
+        New Request
       </Button>
     )
   }
@@ -64,8 +64,8 @@ export function QuickActions({
   if (pathname === '/admin/payments' && onAddPayment) {
     return (
       <Button onClick={onAddPayment} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">Log Payment</span>
+        <Plus className="h-4 w-4 mr-2" />
+        Log Payment
       </Button>
     )
   }
@@ -73,8 +73,8 @@ export function QuickActions({
   if (pathname === '/admin/announcements' && onAddAnnouncement) {
     return (
       <Button onClick={onAddAnnouncement} size="sm">
-        <Plus className="h-4 w-4 mr-0 sm:mr-2" />
-        <span className="hidden sm:inline">New Announcement</span>
+        <Plus className="h-4 w-4 mr-2" />
+        New Announcement
       </Button>
     )
   }
