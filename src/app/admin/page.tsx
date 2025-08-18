@@ -1149,7 +1149,7 @@ export default function AdminDashboard() {
               </div>
               
               {/* Legends - single horizontal line below chart with proper spacing */}
-              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 w-full px-2 pb-4">
+              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-3 w-full px-2 pb-4">
                 {propertyOverviewData.map((item, index) => (
                   <div key={index} className="flex items-center text-xs">
                     <div 

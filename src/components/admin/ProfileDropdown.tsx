@@ -84,7 +84,7 @@ export function ProfileDropdown() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-3 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800"
       >
-        <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 dark:bg-blue-500 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-600 dark:bg-blue-500 flex items-center justify-center">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />

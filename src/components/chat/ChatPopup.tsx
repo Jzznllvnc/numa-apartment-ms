@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User, ChatConversation } from '@/types/database';
 import TenantList from '@/components/chat/TenantList';
@@ -22,6 +22,28 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
   const [showDropdown, setShowDropdown] = useState(false);
   const [clearing, setClearing] = useState(false);
   const supabase = createClient();
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Handle click outside to close chat
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (chatContainerRef.current && !chatContainerRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      // Add event listener with a small delay to prevent immediate closing
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -242,7 +264,8 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
 
   return (
     <div className="fixed bottom-24 right-6 z-40">
-      <div className="w-96 h-[32rem] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+      <div className="w-96 h-[32rem] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+           ref={chatContainerRef}>
         {/* Header */}
         <div className="bg-blue-600 dark:bg-blue-700 text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">

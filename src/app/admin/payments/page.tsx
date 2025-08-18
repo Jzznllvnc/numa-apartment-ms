@@ -310,7 +310,7 @@ export default function PaymentsManagement() {
       )}
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-start justify-between">
             <div className="text-sm text-gray-500 dark:text-gray-300">Total Collected</div>

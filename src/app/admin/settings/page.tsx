@@ -43,6 +43,8 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>('')
+  const [pendingAvatarPath, setPendingAvatarPath] = useState<string>('')
+  const [pendingAvatarFileName, setPendingAvatarFileName] = useState<string>('')
   const { show } = useAlerts()
 
   useEffect(() => {
@@ -142,31 +144,45 @@ export default function SettingsPage() {
         })
       if (uploadError) throw uploadError
 
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar_url: path, updated_at: new Date().toISOString() })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
-
-      show({ title: 'Success', description: 'Profile picture updated successfully', color: 'success' })
-      // Refresh profile to reflect new avatar
-      await fetchData()
-      // Notify other parts of the app (e.g., header) to refresh profile data
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('profile:updated'))
-      }
-      // Update preview immediately with a new signed URL and invalidate cache for this user
-      invalidateSignedAvatarUrlsForPrefix(`${user.id}/`)
+      // Store the path and filename for later saving and update preview
+      setPendingAvatarPath(path)
+      setPendingAvatarFileName(file.name)
       const url = await getSignedAvatarUrl(supabase, path, { force: true } as any)
       setAvatarPreviewUrl(url)
-      setLastAvatarPathForUser(user.id, path)
+      
+      show({ title: 'Success', description: 'Avatar ready to save. Click "Save Profile" to complete.', color: 'success' })
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err: any) {
       console.error('Avatar upload error:', err)
       show({ title: 'Error', description: err.message || 'Error uploading avatar', color: 'danger' })
     } finally {
       setUploading(false)
+    }
+  }
+
+  const removePendingAvatar = async () => {
+    if (!pendingAvatarPath) return
+    
+    try {
+      // Delete the uploaded file from storage since user doesn't want it
+      await supabase.storage.from('avatars').remove([pendingAvatarPath])
+      
+      // Reset states
+      setPendingAvatarPath('')
+      setPendingAvatarFileName('')
+      
+      // Reset avatar preview to original
+      if (profile?.avatar_url) {
+        const url = await getSignedAvatarUrl(supabase, profile.avatar_url)
+        setAvatarPreviewUrl(url)
+      } else {
+        setAvatarPreviewUrl('')
+      }
+      
+      show({ title: 'Success', description: 'New avatar removed', color: 'success' })
+    } catch (err: any) {
+      console.error('Error removing avatar:', err)
+      show({ title: 'Error', description: 'Failed to remove avatar', color: 'danger' })
     }
   }
 
@@ -179,16 +195,34 @@ export default function SettingsPage() {
         throw new Error('No profile data')
       }
 
+      const updateData: any = {
+        full_name: profileForm.full_name,
+        phone_number: profileForm.phone_number,
+        updated_at: new Date().toISOString()
+      }
+
+      // Include avatar_url if there's a pending avatar upload
+      if (pendingAvatarPath) {
+        updateData.avatar_url = pendingAvatarPath
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({
-          full_name: profileForm.full_name,
-          phone_number: profileForm.phone_number,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', profile.id)
 
       if (error) throw error
+
+      // If avatar was updated, refresh cache and notify components
+      if (pendingAvatarPath) {
+        invalidateSignedAvatarUrlsForPrefix(`${profile.id}/`)
+        setLastAvatarPathForUser(profile.id, pendingAvatarPath)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('profile:updated'))
+        }
+        setPendingAvatarPath('') // Clear pending avatar
+        setPendingAvatarFileName('') // Clear pending filename
+      }
 
       show({ title: 'Success', description: 'Profile updated successfully', color: 'success' })
       fetchData()
@@ -232,8 +266,8 @@ export default function SettingsPage() {
         <CardContent>
           <form onSubmit={handleProfileSubmit} className="space-y-6">
             {/* Avatar */}
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className={`w-16 h-16 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center flex-shrink-0 ${pendingAvatarPath ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}>
                 {avatarPreviewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarPreviewUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -243,15 +277,53 @@ export default function SettingsPage() {
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  disabled={uploading}
-                  className="block text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 dark:file:bg-gray-800 file:text-blue-700 dark:file:text-gray-200 hover:file:bg-blue-100 dark:hover:file:bg-gray-700" />
-                {uploading && <span className="text-sm text-gray-500">Uploading...</span>}
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="text-sm w-full sm:w-auto"
+                  >
+                    Choose file
+                  </Button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {pendingAvatarPath ? (
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          {pendingAvatarFileName}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removePendingAvatar}
+                          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 h-6 w-6 p-0 flex-shrink-0"
+                          title="Remove selected file"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-500 dark:text-gray-400">No file chosen</span>
+                    )}
+                    {uploading && <span className="text-sm text-gray-500">Uploading...</span>}
+                  </div>
+                </div>
+                {pendingAvatarPath && (
+                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                    ✓ New avatar ready to save
+                  </span>
+                )}
               </div>
             </div>
 
@@ -298,10 +370,10 @@ export default function SettingsPage() {
             <Button 
               type="submit" 
               disabled={saving}
-              className="bg-blue-600 text-white hover:bg-blue-700"
+              className="text-white hover:bg-blue-700 bg-blue-600"
             >
               <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? 'Saving...' : (pendingAvatarPath ? 'Save Profile & Avatar' : 'Save Profile')}
             </Button>
           </form>
         </CardContent>
