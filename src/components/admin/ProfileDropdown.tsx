@@ -125,9 +125,9 @@ export function ProfileDropdown() {
       )}
 
       <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title="" size="md" hideHeader>
-        <div className="flex flex-col items-center text-center p-4">
-          <Image src="/logout.png" alt="Logout" width={1024} height={1024} className="w-60 h-60 object-contain mb-5" />
-          <p className="text-xl font-semibold mb-2">Are you sure you want to logout?</p>
+        <div className="flex flex-col items-center text-center p-5">
+          <Image src="/logout.svg" alt="Logout" width={1024} height={1024} className="w-50 h-50 object-cover mb-5" />
+          <p className="text-2xl font-bold mb-2 font-acari-sans">Are you sure you want to logout?</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">You will need to log in again to access your account.</p>
           <div className="flex items-center justify-center gap-3 pt-2">
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>No, cancel</Button>

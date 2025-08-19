@@ -142,7 +142,7 @@ export default function ForgotPassword() {
           alt="Secure Recovery Process"
           width={1600}
           height={1200}
-          className="rounded-lg max-w-full h-auto opacity-0 animate-slide-up-delay-3"
+          className="rounded-lg max-w-[90%] h-auto opacity-0 animate-slide-up-delay-3"
         />
       </div>
     </div>

@@ -228,11 +228,11 @@ export default function Login() {
           your operations today.
         </p>
         <Image
-          src="/login.png"
+          src="/login.svg"
           alt="Dashboard Preview"
           width={1600}
           height={1200}
-          className="rounded-lg max-w-full h-auto opacity-0 animate-slide-up-delay-3"
+          className="rounded-lg max-w-[80%] h-auto opacity-0 animate-slide-up-delay-3"
         />
       </div>
     </div>

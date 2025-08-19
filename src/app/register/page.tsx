@@ -193,15 +193,15 @@ export default function Register() {
       </div>
 
       {/* Right Side - Hero Image */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-green-600 to-blue-700 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0 flex-col justify-center items-center text-white p-6">
+      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-purple-700 to-blue-600 rounded-tl-2xl rounded-bl-2xl overflow-hidden m-2 mr-0 flex-col justify-center items-center text-white p-6">
         <h2 className="text-4xl font-bold mb-4 max-w-lg text-center opacity-0 animate-slide-up-delay-1">
           Effortlessly manage your apartment operations.
         </h2>
         <p className="text-base mb-20 max-w-lg text-center opacity-0 animate-slide-up-delay-2">
-          Sign up to create your account, or contact admin for assistance.
+          Sign up to create your account, or <br /> contact admin for assistance.
         </p>
         <Image
-          src="/register.png"
+          src="/register.svg"
           alt="Features Preview"
           width={1600}
           height={1200}
