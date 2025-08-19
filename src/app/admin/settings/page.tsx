@@ -6,7 +6,7 @@ import { getSignedAvatarUrl, invalidateSignedAvatarUrlsForPrefix, getCachedAvata
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LayoutPanelLeft, Save, User, Shield, Database } from 'lucide-react'
+import { LayoutPanelLeft, Save, UserCog, Shield, Database } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAlerts } from '@/components/ui/alerts'
 
@@ -256,7 +256,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center mb-2">
-            <User className="h-6 w-6 mr-3 text-blue-600" />
+            <UserCog className="h-6 w-6 mr-3 text-blue-600" />
             Manage Profile
           </CardTitle>
           <CardDescription>

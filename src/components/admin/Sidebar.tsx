@@ -13,7 +13,7 @@ import {
   Users, 
   FileText, 
   DollarSign, 
-  Wrench, 
+  Hammer, 
   Bell, 
   LayoutDashboard, 
   Menu,
@@ -62,7 +62,7 @@ const navigation = [
   {
     name: 'Maintenance',
     href: '/admin/maintenance',
-    icon: Wrench
+    icon: Hammer
   },
   {
     name: 'Announcements',

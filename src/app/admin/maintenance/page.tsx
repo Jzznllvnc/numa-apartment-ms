@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
-import { Wrench, Edit, Trash2, Plus, Calendar, User, Building, AlertCircle, CheckCircle, Hammer } from 'lucide-react'
+import { Hammer, Edit, Trash2, Plus, Calendar, User, Building, AlertCircle, CheckCircle } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAdminActions } from '@/components/admin/AdminContext'
 import { useAlerts } from '@/components/ui/alerts'
@@ -311,7 +311,7 @@ export default function MaintenanceManagement() {
       case 'pending':
         return <AlertCircle className="h-4 w-4" />
       case 'in_progress':
-        return <Wrench className="h-4 w-4" />
+        return <Hammer className="h-4 w-4" />
       case 'completed':
         return <CheckCircle className="h-4 w-4" />
       default:
@@ -343,19 +343,17 @@ export default function MaintenanceManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Under Maintenance</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Wrench className="h-5 w-5" />
+            <div className="text-base">Under Maintenance</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Hammer className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
+          <div className="mt-2 flex items-baseline gap-3">
             <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{underMaintenanceUnits}</div>
           </div>
-          <div className="mt-2 text-xs text-gray-500">{stats.pending} pending requests</div>
+          <div className="mt-3 text-xs text-gray-500">{stats.pending} pending requests</div>
         </div>
       </div>
-
-      {/* Removed extra status cards per preference */}
 
       {/* Requests List */}
       <div className="space-y-4">
@@ -470,7 +468,7 @@ export default function MaintenanceManagement() {
       {requests.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
-            <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <Hammer className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No Maintenance Requests</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">All maintenance requests will appear here.</p>
             <Button 

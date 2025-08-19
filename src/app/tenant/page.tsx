@@ -8,7 +8,7 @@ import { getSignedAvatarUrl, invalidateSignedAvatarUrlsForPrefix, getCachedAvata
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Home, CreditCard, Wrench, Bell, Sun, Moon, User as UserIcon, LogOut, Plus, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Home, CreditCard, Wrench, Bell, Sun, Moon, UserCog, LogOut, Plus, ArrowLeft, ChevronDown } from 'lucide-react'
 import { User, Lease, Payment, MaintenanceRequest, Announcement } from '@/types/database'
 import { Textarea } from '@/components/ui/textarea'
 import { Modal } from '@/components/ui/modal'
@@ -349,7 +349,7 @@ function ProfileDropdown({ onManageProfile, onLogout }: { onManageProfile: () =>
       {isOpen && (
         <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
           <a href="#" onClick={(e) => { e.preventDefault(); setIsOpen(false); onManageProfile() }} className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <UserIcon className="mr-3 h-4 w-4" />
+            <UserCog className="mr-3 h-4 w-4" />
             Manage Profile
           </a>
           <button onClick={onLogout} className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
@@ -496,7 +496,7 @@ function ProfileEditor({ user, onBack, refreshParent }: { user: User | null; onB
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center">
-              <UserIcon className="h-6 w-6 text-blue-600 mr-3" />
+              <UserCog className="h-6 w-6 text-blue-600 mr-3" />
               Manage Profile
             </CardTitle>
             {/* Back button for desktop - hidden on mobile */}

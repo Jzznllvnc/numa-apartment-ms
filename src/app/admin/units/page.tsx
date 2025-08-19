@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
-import { Building, Edit, Trash2, HousePlus, Bed, Bath, Square, Upload, X, AlertCircle } from 'lucide-react'
+import { Building, Edit, Trash2, HousePlus, Bed, Bath, Square, Upload, X, AlertCircle, DoorClosed, DoorOpen } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { Unit } from '@/types/database'
 import { useAdminActions } from '@/components/admin/AdminContext'
@@ -436,28 +436,28 @@ export default function UnitsManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Occupied Units</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Building className="h-5 w-5" />
+            <div className="text-base">Occupied Units</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <DoorClosed className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
+          <div className="mt-2 flex items-baseline gap-3">
             <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{occupiedCount}</div>
           </div>
-          <div className="mt-2 text-xs text-gray-500">Currently generating revenue</div>
+          <div className="mt-3 text-xs text-gray-500">Currently generating revenue</div>
         </div>
 
         <div className="rounded-2xl border bg-card p-6 shadow-sm">
           <div className="flex items-start justify-between">
-            <div className="text-sm text-gray-500 dark:text-gray-300">Vacant Units</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Building className="h-5 w-5" />
+            <div className="text-base">Vacant Units</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <DoorOpen className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
+          <div className="mt-2 flex items-baseline gap-3">
             <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{vacantCount}</div>
           </div>
-          <div className="mt-2 text-xs text-gray-500">Available for rent</div>
+          <div className="mt-3 text-xs text-gray-500">Available for rent</div>
         </div>
       </div>
 

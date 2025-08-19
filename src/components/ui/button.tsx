@@ -8,7 +8,6 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          // Light mode: navy button; Dark mode: white button with dark text
           "bg-[#2860e9] text-white hover:bg-[#1b42a1]",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",

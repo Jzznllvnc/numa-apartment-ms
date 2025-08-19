@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts'
-import { Building, Users, DollarSign, Wrench, TrendingUp, TrendingDown, Search, ListFilter, ChevronDown, Megaphone, ArrowUpRight } from 'lucide-react'
+import { Building, Users, DollarSign, Hammer, TrendingUp, TrendingDown, Search, ListFilter, ChevronDown, Megaphone, ArrowUpRight } from 'lucide-react'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import clsx from 'clsx'
 
@@ -760,147 +760,150 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Revenue (payments) */}
         <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
-          <div className="flex items-start justify-between mb-2">
-            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">Total Revenue</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <div className="flex items-start justify-between">
+            <div className="text-base mt-1">Total Revenue</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
           <div className="flex-1 flex items-center">
-            <div className="flex items-center gap-4">
-              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
-              {(() => {
-                const last = stats.revenueLastMonth
-                const curr = stats.revenueThisMonth
-                if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
-                }
-                
-                let pct: number
-                let up: boolean
-                
-                if (last === 0 && curr > 0) {
-                  // When starting from 0, show 100% increase
-                  pct = 100
-                  up = true
-                } else if (last > 0 && curr === 0) {
-                  // When going to 0, show 100% decrease
-                  pct = 100
-                  up = false
-                } else {
-                  // Normal calculation with 1-100% cap
-                  up = curr >= last
-                  pct = Math.abs(((curr - last) / last) * 100)
-                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-                }
-                
-                return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
-                    {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                    {pct.toFixed(1)}%
-                  </span>
-                )
-              })()}
-            </div>
+            <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
           </div>
-          <div className="text-xs text-gray-500 mt-auto">Based on recorded payments</div>
+          <div className="flex items-center gap-2 mt-auto">
+            <span className="text-xs">Based on recorded payments</span>
+            <span className="text-gray-400">|</span>
+            {(() => {
+              const last = stats.revenueLastMonth
+              const curr = stats.revenueThisMonth
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
+              }
+              
+              let pct: number
+              let up: boolean
+              
+              if (last === 0 && curr > 0) {
+                // When starting from 0, show 100% increase
+                pct = 100
+                up = true
+              } else if (last > 0 && curr === 0) {
+                // When going to 0, show 100% decrease
+                pct = 100
+                up = false
+              } else {
+                // Normal calculation with 1-100% cap
+                up = curr >= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+              }
+              
+              return (
+                <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
+                  {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {pct.toFixed(1)}%
+                </span>
+              )
+            })()}
+          </div>
         </div>
 
         {/* New Tenants */}
         <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
-          <div className="flex items-start justify-between mb-2">
-            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">New Tenants</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Users className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <div className="flex items-start justify-between">
+            <div className="text-base mt-1">New Tenants</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Users className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
           <div className="flex-1 flex items-center">
-            <div className="flex items-center gap-4">
-              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.newTenantsThisMonth}</div>
-              {(() => {
-                const last = stats.newTenantsLastMonth
-                const curr = stats.newTenantsThisMonth
-                if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
-                }
-                
-                let pct: number
-                let up: boolean
-                
-                if (last === 0 && curr > 0) {
-                  // When starting from 0, show 100% increase
-                  pct = 100
-                  up = true
-                } else if (last > 0 && curr === 0) {
-                  // When going to 0, show 100% decrease
-                  pct = 100
-                  up = false
-                } else {
-                  // Normal calculation with 1-100% cap
-                  up = curr >= last
-                  pct = Math.abs(((curr - last) / last) * 100)
-                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-                }
-                
-                return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
-                    {up ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                    {pct.toFixed(1)}%
-                  </span>
-                )
-              })()}
-            </div>
+            <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.newTenantsThisMonth}</div>
           </div>
-          <div className="text-xs text-gray-500 mt-auto">Registered this month</div>
+          <div className="flex items-center gap-2 mt-auto">
+            <span className="text-xs">Registered this month</span>
+            <span className="text-gray-400">|</span>
+            {(() => {
+              const last = stats.newTenantsLastMonth
+              const curr = stats.newTenantsThisMonth
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
+              }
+              
+              let pct: number
+              let up: boolean
+              
+              if (last === 0 && curr > 0) {
+                // When starting from 0, show 100% increase
+                pct = 100
+                up = true
+              } else if (last > 0 && curr === 0) {
+                // When going to 0, show 100% decrease
+                pct = 100
+                up = false
+              } else {
+                // Normal calculation with 1-100% cap
+                up = curr >= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+              }
+              
+              return (
+                <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', up ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
+                  {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {pct.toFixed(1)}%
+                </span>
+              )
+            })()}
+          </div>
         </div>
 
         {/* Maintenance Requests */}
         <div className="rounded-2xl border bg-card p-6 shadow-sm h-52 flex flex-col">
-          <div className="flex items-start justify-between mb-2">
-            <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">Maintenance Requests</div>
-            <div className="h-9 w-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-              <Wrench className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+          <div className="flex items-start justify-between">
+            <div className="text-base mt-1">Maintenance Requests</div>
+            <div className="h-12 w-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <Hammer className="h-6 w-6 text-gray-600 dark:text-gray-300" />
             </div>
           </div>
           <div className="flex-1 flex items-center">
-            <div className="flex items-center gap-4">
-              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.maintenanceThisMonth}</div>
-              {(() => {
-                const last = stats.maintenanceLastMonth
-                const curr = stats.maintenanceThisMonth
-                if (last === 0 && curr === 0) {
-                  return <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
-                }
-                
-                let pct: number
-                let isGood: boolean // For maintenance, fewer is better
-                
-                if (last === 0 && curr > 0) {
-                  // For maintenance requests, increase from 0 is bad (red)
-                  pct = 100
-                  isGood = false
-                } else if (last > 0 && curr === 0) {
-                  // For maintenance requests, decrease to 0 is good (green)
-                  pct = 100
-                  isGood = true
-                } else {
-                  // Normal calculation with 1-100% cap
-                  // For maintenance requests, fewer is better
-                  isGood = curr <= last
-                  pct = Math.abs(((curr - last) / last) * 100)
-                  pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
-                }
-                
-                return (
-                  <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', isGood ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
-                    {curr > last ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
-                    {pct.toFixed(1)}%
-                  </span>
-                )
-              })()}
-            </div>
+            <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.maintenanceThisMonth}</div>
           </div>
-          <div className="text-xs text-gray-500 mt-auto">Requests submitted this month</div>
+          <div className="flex items-center gap-2 mt-auto">
+            <span className="text-xs">Requests submitted this month</span>
+            <span className="text-gray-400">|</span>
+            {(() => {
+              const last = stats.maintenanceLastMonth
+              const curr = stats.maintenanceThisMonth
+              if (last === 0 && curr === 0) {
+                return <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-300 font-medium">No data</span>
+              }
+              
+              let pct: number
+              let isGood: boolean // For maintenance, fewer is better
+              
+              if (last === 0 && curr > 0) {
+                // For maintenance requests, increase from 0 is bad (red)
+                pct = 100
+                isGood = false
+              } else if (last > 0 && curr === 0) {
+                // For maintenance requests, decrease to 0 is good (green)
+                pct = 100
+                isGood = true
+              } else {
+                // Normal calculation with 1-100% cap
+                // For maintenance requests, fewer is better
+                isGood = curr <= last
+                pct = Math.abs(((curr - last) / last) * 100)
+                pct = Math.max(1, Math.min(100, pct)) // Cap between 1-100%
+              }
+              
+              return (
+                <span className={clsx('text-xs px-2 py-1 rounded-full flex items-center gap-1 font-medium', isGood ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300')}>
+                  {curr > last ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {pct.toFixed(1)}%
+                </span>
+              )
+            })()}
+          </div>
         </div>
 
       </div>
@@ -1240,7 +1243,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">Unit {unit.unit_number}</p>
-                          <p className="text-xs text-gray-500 truncate">{unit.tenant_name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{unit.tenant_name}</p>
                         </div>
                       </div>
                       <span className="text-xs px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium flex-shrink-0">Active</span>
@@ -1287,7 +1290,7 @@ export default function AdminDashboard() {
                             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex-1">{announcement.title}</p>
                             <p className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{formatTimeAgo(announcement.created_at)}</p>
                           </div>
-                          <p className="text-xs text-gray-500 leading-relaxed overflow-hidden" style={{
+                          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed overflow-hidden" style={{
                             display: '-webkit-box',
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical'
