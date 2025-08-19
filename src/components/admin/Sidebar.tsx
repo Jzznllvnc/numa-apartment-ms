@@ -15,7 +15,7 @@ import {
   DollarSign, 
   Wrench, 
   Bell, 
-  BarChart3, 
+  LayoutDashboard, 
   Menu,
   X,
   ChevronLeft,
@@ -36,7 +36,7 @@ const navigation = [
   {
     name: 'Dashboard',
     href: '/admin',
-    icon: BarChart3,
+    icon: LayoutDashboard,
     exact: true
   },
   {
