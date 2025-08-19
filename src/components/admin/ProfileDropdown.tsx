@@ -98,7 +98,7 @@ export function ProfileDropdown() {
           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{profile?.full_name || 'Admin User'}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">{profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'Administrator'}</p>
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-400 dark:text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </Button>
 
       {/* Dropdown Menu */}

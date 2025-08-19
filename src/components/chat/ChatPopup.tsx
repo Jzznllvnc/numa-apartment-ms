@@ -278,7 +278,7 @@ const ChatPopup: React.FC<ChatPopupProps> = ({ isOpen, onClose, onMarkAsRead }) 
               </button>
             )}
             <MessageCircleMore className="w-6 h-6" />
-            <h3 className="font-medium text-white">
+            <h3 className="text-lg mt-1 font-medium text-white">
               {loading
                 ? 'Loading...'
                 : view === 'conversation' && selectedConversation

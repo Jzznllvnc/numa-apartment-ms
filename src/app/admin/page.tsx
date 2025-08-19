@@ -768,7 +768,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex-1 flex items-center">
             <div className="flex items-center gap-4">
-              <div className="text-5xl font-semibold leading-none">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
+              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">${stats.revenueThisMonth.toLocaleString(undefined,{maximumFractionDigits:2})}</div>
               {(() => {
                 const last = stats.revenueLastMonth
                 const curr = stats.revenueThisMonth
@@ -816,7 +816,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex-1 flex items-center">
             <div className="flex items-center gap-4">
-              <div className="text-5xl font-semibold leading-none">{stats.newTenantsThisMonth}</div>
+              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.newTenantsThisMonth}</div>
               {(() => {
                 const last = stats.newTenantsLastMonth
                 const curr = stats.newTenantsThisMonth
@@ -864,7 +864,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex-1 flex items-center">
             <div className="flex items-center gap-4">
-              <div className="text-5xl font-semibold leading-none">{stats.maintenanceThisMonth}</div>
+              <div className="text-[2.5rem] lg:text-[3rem] font-semibold leading-none font-acari-sans">{stats.maintenanceThisMonth}</div>
               {(() => {
                 const last = stats.maintenanceLastMonth
                 const curr = stats.maintenanceThisMonth
@@ -1151,8 +1151,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Right Column: Lease Overview + Side Cards */}
-        <div className="space-y-4 sm:space-y-6">
-          <Card className="h-[29.3rem] rounded-2xl">
+        <div className="flex flex-col space-y-4 sm:space-y-6">
+          <Card className="h-[29.3rem] rounded-2xl flex-shrink-0">
             <CardHeader>
               <CardTitle>Lease Overview</CardTitle>
               <CardDescription>Units & Payments Status</CardDescription>
@@ -1188,17 +1188,17 @@ export default function AdminDashboard() {
                 </PieChart>
               </div>
               
-              <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-3 w-full px-2 pb-4">
+              <div className="flex flex-wrap justify-center items-center gap-x-2 gap-y-2 w-full px-4 pb-4 max-w-full overflow-hidden">
                 {propertyOverviewData.map((item, index) => (
-                  <div key={index} className="flex items-center text-xs">
+                  <div key={index} className="flex items-center text-xs min-w-0 flex-shrink-0">
                     <div 
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0 mr-2" 
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0 mr-1.5" 
                       style={{ backgroundColor: item.color }}
                     ></div>
-                    <span className="text-gray-600 dark:text-gray-300 whitespace-nowrap text-sm mr-1">
+                    <span className="text-gray-600 dark:text-gray-300 text-[0.8rem] mr-1 truncate">
                       {item.name}
                     </span>
-                    <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                    <span className="font-semibold text-[0.8rem] text-gray-900 dark:text-gray-100 flex-shrink-0">
                       ({item.value}%)
                     </span>
                   </div>
@@ -1208,9 +1208,9 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Combined Occupied Units & Announcements Card */}
-          <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6 lg:h-[35.7rem]">
+          <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-transparent p-6 flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Occupied Units Section */}
-            <div className="mb-8">
+            <div className="mb-6">
               <div className="mb-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1225,7 +1225,7 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 max-h-[180px] overflow-y-auto">
                 {recentOccupiedUnits.length === 0 ? (
                   <div className="text-center py-4">
                     <Building className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -1234,16 +1234,16 @@ export default function AdminDashboard() {
                 ) : (
                   recentOccupiedUnits.slice(0, 3).map((unit, index) => (
                     <div key={unit.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
                           <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Unit {unit.unit_number}</p>
-                          <p className="text-xs text-gray-500">{unit.tenant_name}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">Unit {unit.unit_number}</p>
+                          <p className="text-xs text-gray-500 truncate">{unit.tenant_name}</p>
                         </div>
                       </div>
-                      <span className="text-xs px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium">Active</span>
+                      <span className="text-xs px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 font-medium flex-shrink-0">Active</span>
                     </div>
                   ))
                 )}
@@ -1251,11 +1251,11 @@ export default function AdminDashboard() {
             </div>
 
             {/* Separation Line */}
-            <div className="border-t border-gray-200 dark:border-gray-700 my-6"></div>
+            <div className="border-t border-gray-200 dark:border-gray-700 my-4"></div>
 
             {/* Announcements Section */}
-            <div>
-              <div className="mb-4">
+            <div className="flex flex-col min-h-0">
+              <div className="mb-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Announcements</h3>
@@ -1263,13 +1263,13 @@ export default function AdminDashboard() {
                   </div>
                   <button
                     onClick={() => router.push('/admin/announcements')}
-                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
                   >
                     <ArrowUpRight className="h-6 w-6 text-black hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" />
                   </button>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
                 {recentAnnouncements.length === 0 ? (
                   <div className="text-center py-4">
                     <Megaphone className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -1277,17 +1277,23 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   recentAnnouncements.slice(0, 3).map((announcement, index) => (
-                    <div key={announcement.id} className="flex items-start">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0 mr-2">
+                    <div key={announcement.id} className="flex items-start min-w-0">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
                           <Megaphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate pr-2">{announcement.title}</p>
-                            <p className="text-xs text-gray-400 whitespace-nowrap ml-2 mt-0.5">{formatTimeAgo(announcement.created_at)}</p>
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate flex-1">{announcement.title}</p>
+                            <p className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{formatTimeAgo(announcement.created_at)}</p>
                           </div>
-                          <p className="text-xs text-gray-500 leading-relaxed mt-1">{announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed overflow-hidden" style={{
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}>
+                            {announcement.content.length > 60 ? announcement.content.substring(0, 60) + '...' : announcement.content}
+                          </p>
                         </div>
                       </div>
                     </div>

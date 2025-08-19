@@ -227,7 +227,7 @@ export default function AnnouncementsManagement() {
               <div className="flex items-start">
                 <div className="flex-1">
                   <CardTitle className="text-lg sm:text-xl mb-2 sm:mb-3 flex items-start">
-                    <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 text-blue-600 flex-shrink-0 mt-0.5" />
                     <span className="leading-tight">{announcement.title}</span>
                   </CardTitle>
                   <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
@@ -287,7 +287,7 @@ export default function AnnouncementsManagement() {
         onClose={closeModal}
         title={
           <span className="flex items-center">
-            {(editingAnnouncement ? <Edit className="h-6 w-6 mr-3 text-blue-600 mb-1" /> : <Megaphone className="h-6 w-6 mr-3 text-blue-600 mb-1" />)}
+            {(editingAnnouncement ? <Edit className="h-5 w-5 mr-3 text-blue-600 mb-1" /> : <Megaphone className="h-5 w-5 mr-3 text-blue-600 mb-1" />)}
             {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
           </span>
         }

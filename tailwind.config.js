@@ -18,6 +18,7 @@ module.exports = {
     extend: {
       fontFamily: {
         'poppins': ['var(--font-poppins)', 'sans-serif'],
+        'acari-sans': ['Acari Sans', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

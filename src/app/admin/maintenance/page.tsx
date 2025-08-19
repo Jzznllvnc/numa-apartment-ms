@@ -349,7 +349,7 @@ export default function MaintenanceManagement() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">{underMaintenanceUnits}</div>
+            <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{underMaintenanceUnits}</div>
           </div>
           <div className="mt-2 text-xs text-gray-500">{stats.pending} pending requests</div>
         </div>

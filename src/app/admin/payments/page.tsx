@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { DatePicker, MonthPicker } from '@/components/ui/calendar'
 import { Modal, ConfirmModal } from '@/components/ui/modal'
-import { DollarSign, Edit, Trash2, Plus, Calendar, User, Building, CreditCard, Printer } from 'lucide-react'
+import { DollarSign, Edit, Trash2, Plus, Calendar, User, Building, CreditCard, Printer, Ellipsis } from 'lucide-react'
 import { useAlerts } from '@/components/ui/alerts'
 import LoadingAnimation from '@/components/ui/LoadingAnimation'
 import { useAdminActions } from '@/components/admin/AdminContext'
@@ -74,6 +74,8 @@ export default function PaymentsManagement() {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null)
   const [deletingPayment, setDeletingPayment] = useState<Payment | null>(null)
   const [printingPayment, setPrintingPayment] = useState<Payment | null>(null)
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null)
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom')
   const [formData, setFormData] = useState<PaymentFormData>({
     tenant_id: '',
     lease_id: '',
@@ -93,12 +95,28 @@ export default function PaymentsManagement() {
   const supabase = createClient()
   const { show } = useAlerts()
   const { setActions } = useAdminActions()
+  const dropdownRefs = useRef<{ [key: number]: HTMLDivElement | null }>({})
 
   useEffect(() => {
     fetchData()
     setActions({ onAddPayment: handleAddPayment })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Handle clicks outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId !== null) {
+        const dropdownElement = dropdownRefs.current[openDropdownId]
+        if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
+          setOpenDropdownId(null)
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openDropdownId])
 
   const fetchData = async () => {
     try {
@@ -292,6 +310,28 @@ export default function PaymentsManagement() {
     setError('')
   }
 
+  const calculateDropdownPosition = (buttonElement: HTMLElement): 'bottom' | 'top' => {
+    const buttonRect = buttonElement.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const dropdownHeight = 180 // Height estimate for 3 items + padding + borders
+    const buffer = 20 // Extra buffer to ensure dropdown doesn't get cut off
+    const spaceBelow = viewportHeight - buttonRect.bottom - buffer
+    const spaceAbove = buttonRect.top - buffer
+    
+    // Show above only if there's not enough space below AND there's enough space above
+    return spaceBelow < dropdownHeight && spaceAbove > dropdownHeight ? 'top' : 'bottom'
+  }
+
+  const handleDropdownToggle = (paymentId: number, buttonElement: HTMLElement) => {
+    if (openDropdownId === paymentId) {
+      setOpenDropdownId(null)
+    } else {
+      const position = calculateDropdownPosition(buttonElement)
+      setDropdownPosition(position)
+      setOpenDropdownId(paymentId)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'paid':
@@ -340,7 +380,7 @@ export default function PaymentsManagement() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">${stats.totalCollected.toLocaleString()}</div>
+            <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">${stats.totalCollected.toLocaleString()}</div>
           </div>
           <div className="mt-2 text-xs text-gray-500">All time payments</div>
         </div>
@@ -353,7 +393,7 @@ export default function PaymentsManagement() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">${stats.thisMonth.toLocaleString()}</div>
+            <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">${stats.thisMonth.toLocaleString()}</div>
           </div>
           <div className="mt-2 text-xs text-gray-500">Current month payments</div>
         </div>
@@ -366,7 +406,7 @@ export default function PaymentsManagement() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-3">
-            <div className="text-3xl font-semibold leading-none">{stats.pendingCount}</div>
+            <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{stats.pendingCount}</div>
           </div>
           <div className="mt-2 text-xs text-gray-500">Currently active leases</div>
         </div>
@@ -446,33 +486,60 @@ export default function PaymentsManagement() {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex gap-2">
+                        <div className="relative" ref={(el) => { 
+                          if (el) {
+                            dropdownRefs.current[payment.id] = el
+                          }
+                        }}>
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(payment)}
+                            variant="ghost"
+                            onClick={(e) => handleDropdownToggle(payment.id, e.currentTarget)}
+                            className="h-8 w-8 p-0"
                           >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
+                            <Ellipsis className="h-5 w-5" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDeleteClick(payment)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePrint(payment)}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <Printer className="h-4 w-4 mr-1" />
-                            Print
-                          </Button>
+                          
+                          {openDropdownId === payment.id && (
+                            <div className={`absolute right-0 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 ${
+                              dropdownPosition === 'top' 
+                                ? 'bottom-full mb-1' 
+                                : 'top-full mt-1'
+                            }`}>
+                              <div className="py-1">
+                                <button
+                                  onClick={() => {
+                                    handleEdit(payment)
+                                    setOpenDropdownId(null)
+                                  }}
+                                  className="flex items-center w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleDeleteClick(payment)
+                                    setOpenDropdownId(null)
+                                  }}
+                                  className="flex items-center w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handlePrint(payment)
+                                    setOpenDropdownId(null)
+                                  }}
+                                  className="flex items-center w-full px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                >
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Print
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

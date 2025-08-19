@@ -37,22 +37,36 @@ export function ContentWrapper({ children }: ContentWrapperProps) {
   const pathname = usePathname()
   const { actions } = useAdminActions()
 
-  const shouldShowQuickActions = pathname !== '/admin' // Don't show on dashboard
+  const shouldShowQuickActions = pathname !== '/admin'
   const pageTitle = generatePageTitle(pathname)
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 min-h-full">
-      <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
+      <div className="flex items-start justify-between !mb-2 gap-3">
         {/* Page Title */}
-        <div className="flex-shrink-0">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 font-poppins">
+        <div className="flex-1 min-w-0">
+        <h1 className="text-[2.5rem] sm:text-[2.5rem] lg:text-[3rem] font-bold text-gray-900 dark:text-gray-100 font-acari-sans leading-tight break-words">
+          <span className="sm:hidden">
+            {pageTitle.split(' ').length === 2 ? (
+              <>
+                {pageTitle.split(' ')[0]}<br />
+                {pageTitle.split(' ')[1]}
+              </>
+            ) : (
+              pageTitle
+            )}
+          </span>
+          
+          {/* Desktop view: Normal display */}
+          <span className="hidden sm:inline">
             {pageTitle}
-          </h1>
+          </span>
+        </h1>
         </div>
         
         {/* Quick Actions */}
         {shouldShowQuickActions && (
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 mt-2 sm:mt-0">
             <QuickActions 
               onAddUnit={actions.onAddUnit}
               onAddTenant={actions.onAddTenant}

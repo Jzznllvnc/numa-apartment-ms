@@ -344,7 +344,7 @@ function ProfileDropdown({ onManageProfile, onLogout }: { onManageProfile: () =>
             <span className="text-white text-sm font-medium">{(fullName || 'U').charAt(0).toUpperCase()}</span>
           )}
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       {isOpen && (
         <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
@@ -854,8 +854,8 @@ export default function TenantDashboard() {
         {view === 'dashboard' ? (
           <>
             {/* Greeting - Only show on dashboard */}
-            <div className="mb-6">
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 font-poppins">
+            <div className="mb-4">
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 dark:text-gray-100 font-acari-sans">
                 Welcome, {data.user?.full_name ? data.user.full_name.split(' ').slice(0, 2).join(' ') : 'Guest'}
               </h1>
             </div>
@@ -867,7 +867,7 @@ export default function TenantDashboard() {
                   <div>
                     <div className="text-sm text-gray-500 dark:text-gray-300 mb-6">Current Unit</div>
                     <div className="mt-3 flex items-baseline gap-3">
-                      <div className="text-3xl font-semibold leading-none">
+                      <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">
                         {data.lease?.unit?.unit_number || 'Not Assigned'}
                       </div>
                     </div>
@@ -915,7 +915,7 @@ export default function TenantDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline gap-3">
-                  <div className="text-3xl font-semibold leading-none">
+                  <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">
                     ${data.lease?.unit?.rent_amount?.toLocaleString() || '0'}
                   </div>
                 </div>
@@ -932,7 +932,7 @@ export default function TenantDashboard() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-baseline gap-3">
-                  <div className="text-3xl font-semibold leading-none">{data.maintenanceRequests.length}</div>
+                  <div className="text-[2rem] lg:text-[2.5rem] font-semibold leading-none font-acari-sans">{data.maintenanceRequests.length}</div>
                 </div>
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   Recent requests submitted

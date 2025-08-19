@@ -111,7 +111,7 @@ export default function Login() {
           height={1024}
           className="h-14 w-14 mr-2"
         />
-        <h1 className={`text-4xl font-bold text-gray-900 ${oleoScript.className}`}>
+        <h1 className={`text-[2.5rem] font-bold text-gray-900 ${oleoScript.className}`}>
           Numa
         </h1>
       </div>

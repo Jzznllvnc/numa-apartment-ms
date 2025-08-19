@@ -124,7 +124,7 @@ const Select = React.forwardRef<HTMLDivElement, SelectProps>(({ className, child
         {...buttonProps}
       >
         <span className={cn('block truncate', !selectedLabel && 'text-muted-foreground')}>{selectedLabel || placeholder}</span>
-        <ChevronDown className={cn('h-4 w-4 opacity-50 transition-transform duration-200', isOpen && 'rotate-180')} />
+        <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180')} />
       </button>
 
       {isOpen && createPortal(dropdown, document.body)}

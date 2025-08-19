@@ -145,7 +145,7 @@ export function Sidebar({ className }: SidebarProps) {
                 priority
               />
               {!isCollapsed && (
-                <h1 className={cn(oleo.className, 'text-4xl text-gray-900 dark:text-gray-100 leading-none')}>Numa</h1>
+                <h1 className={cn(oleo.className, 'text-[2.5rem] text-gray-900 dark:text-gray-100 leading-none')}>Numa</h1>
               )}
             </div>
             <Button
