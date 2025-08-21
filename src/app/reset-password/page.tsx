@@ -132,7 +132,7 @@ export default function ResetPassword() {
       {/* Logo and Brand - Top Left */}
       <div className="absolute top-6 left-6 flex items-center z-10">
         <Image
-          src="/ams.png"
+          src="/images/ams.png"
           alt="AMS Logo"
           width={1024}
           height={1024}

@@ -848,7 +848,7 @@ export default function PaymentsManagement() {
               </div>
               <div className="flex items-center gap-3">
                 <img 
-                  src="/ams.png" 
+                  src="/images/ams.png" 
                   alt="Logo" 
                   className="h-8 w-8 print:h-10 print:w-10" 
                 />

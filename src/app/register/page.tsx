@@ -72,7 +72,7 @@ export default function Register() {
       {/* Logo and Brand - Top Left */}
       <div className="absolute top-6 left-6 flex items-center z-10">
         <Image
-          src="/ams.png"
+          src="/images/ams.png"
           alt="AMS Logo"
           width={1024}
           height={1024}
@@ -201,7 +201,7 @@ export default function Register() {
           Sign up to create your account, or <br /> contact admin for assistance.
         </p>
         <Image
-          src="/register.svg"
+          src="/icons/register.svg"
           alt="Features Preview"
           width={1600}
           height={1200}

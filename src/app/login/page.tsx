@@ -105,7 +105,7 @@ export default function Login() {
       {/* Logo and Brand - Top Left */}
       <div className="absolute top-6 left-6 flex items-center z-10">
         <Image
-          src="/ams.png"
+          src="/images/ams.png"
           alt="AMS Logo"
           width={1024}
           height={1024}
@@ -228,7 +228,7 @@ export default function Login() {
           your operations today.
         </p>
         <Image
-          src="/login.svg"
+          src="/icons/login.svg"
           alt="Dashboard Preview"
           width={1600}
           height={1200}

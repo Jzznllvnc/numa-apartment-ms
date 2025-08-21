@@ -35,7 +35,7 @@ const imageCache = new Map<string, string>()
 
 // Helper function to get cached image URL
 const getCachedImageUrl = (imagePath: string): string | null => {
-  if (!imagePath) return '/placeholder-unit.svg'
+  if (!imagePath) return '/icons/placeholder-unit.svg'
   
   // Check memory cache first
   if (imageCache.has(imagePath)) {
@@ -151,7 +151,7 @@ export default function UnitsManagement() {
   }
 
   const getSignedImageUrl = async (imagePath: string): Promise<string> => {
-    if (!imagePath) return '/placeholder-unit.svg'
+    if (!imagePath) return '/icons/placeholder-unit.svg'
     
     // Check cache first
     const cachedUrl = getCachedImageUrl(imagePath)
@@ -172,7 +172,7 @@ export default function UnitsManagement() {
       return data.signedUrl
     } catch (err) {
       console.error('Error getting signed URL:', err)
-      return '/placeholder-unit.svg'
+      return '/icons/placeholder-unit.svg'
     }
   }
 
@@ -771,7 +771,7 @@ function UnitCard({
   getSignedImageUrl: (path: string) => Promise<string>
   index?: number
 }) {
-  const [imageUrl, setImageUrl] = useState<string>('/placeholder-unit.svg')
+  const [imageUrl, setImageUrl] = useState<string>('/icons/placeholder-unit.svg')
   const [imageLoaded, setImageLoaded] = useState(false)
 
   useEffect(() => {
@@ -798,7 +798,7 @@ function UnitCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             priority={index < 2}
             className="object-cover"
-            onError={() => setImageUrl('/placeholder-unit.svg')}
+            onError={() => setImageUrl('/icons/placeholder-unit.svg')}
           />
           {/* Status badge positioned on image */}
           <div className="absolute top-3 left-3">

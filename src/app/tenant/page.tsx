@@ -611,7 +611,7 @@ export default function TenantDashboard() {
     announcements: [],
   })
   const [loading, setLoading] = useState(true)
-  const [unitImageUrl, setUnitImageUrl] = useState<string>('/placeholder-unit.svg')
+  const [unitImageUrl, setUnitImageUrl] = useState<string>('/icons/placeholder-unit.svg')
   const [showImageModal, setShowImageModal] = useState(false)
   const supabase = createClient()
   const [view, setView] = useState<'dashboard' | 'profile'>('dashboard')
@@ -629,7 +629,7 @@ export default function TenantDashboard() {
 
   // Helper function to get signed unit image URL
   const getSignedUnitImageUrl = async (imagePath: string): Promise<string> => {
-    if (!imagePath) return '/placeholder-unit.svg'
+    if (!imagePath) return '/icons/placeholder-unit.svg'
     
     try {
       const { data, error } = await supabase.storage
@@ -640,7 +640,7 @@ export default function TenantDashboard() {
       return data.signedUrl
     } catch (err) {
       console.error('Error getting signed URL:', err)
-      return '/placeholder-unit.svg'
+      return '/icons/placeholder-unit.svg'
     }
   }
 
@@ -717,7 +717,7 @@ export default function TenantDashboard() {
         const imageUrl = await getSignedUnitImageUrl(lease.unit.image_url)
         setUnitImageUrl(imageUrl)
       } else {
-        setUnitImageUrl('/placeholder-unit.svg')
+        setUnitImageUrl('/icons/placeholder-unit.svg')
       }
     } catch (error) {
       console.error('Error fetching tenant data:', error)
@@ -813,7 +813,7 @@ export default function TenantDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Image src="/ams.png" alt="Logo" width={1024} height={1024} className="h-14 w-14 mr-3" />
+              <Image src="/images/ams.png" alt="Logo" width={1024} height={1024} className="h-14 w-14 mr-3" />
               <div>
                 <h1 className={`text-4xl text-gray-900 dark:text-gray-100 leading-none ${oleo.className}`}>
                   Numa
@@ -884,7 +884,7 @@ export default function TenantDashboard() {
                       width={5274} 
                       height={3517} 
                       className="w-full h-full object-cover cursor-pointer transition-transform duration-200 group-hover:scale-105"
-                      onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+                      onError={() => setUnitImageUrl('/icons/placeholder-unit.svg')}
                       onClick={() => setShowImageModal(true)}
                     />
                     {/* Hover Preview - Only visible on desktop */}
@@ -896,7 +896,7 @@ export default function TenantDashboard() {
                           width={5274} 
                           height={3517} 
                           className="w-full h-full object-cover"
-                          onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+                          onError={() => setUnitImageUrl('/icons/placeholder-unit.svg')}
                         />
                         <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2">
                           <p className="text-xs font-medium">Unit {data.lease?.unit?.unit_number || ''}</p>
@@ -1195,7 +1195,7 @@ export default function TenantDashboard() {
               width={5274} 
               height={3517} 
               className="w-full h-full object-contain"
-              onError={() => setUnitImageUrl('/placeholder-unit.svg')}
+              onError={() => setUnitImageUrl('/icons/placeholder-unit.svg')}
             />
           </div>
           {data.lease?.unit && (
@@ -1250,7 +1250,7 @@ export default function TenantDashboard() {
         hideHeader
       >
         <div className="flex flex-col items-center text-center p-5">
-          <Image src="/logout.svg" alt="Logout" width={1024} height={1024} className="w-50 h-50 object-cover mb-5" />
+          <Image src="/icons/logout.svg" alt="Logout" width={1024} height={1024} className="w-50 h-50 object-cover mb-5" />
           <p className="text-2xl font-bold mb-2 font-acari-sans">Are you sure you want to logout?</p>
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">You will need to log in again to access your account.</p>
           <div className="flex items-center justify-center gap-3 pt-2">

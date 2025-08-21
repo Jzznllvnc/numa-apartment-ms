@@ -135,7 +135,7 @@ export function Sidebar({ className }: SidebarProps) {
           <div className={cn("flex items-center justify-between px-6 h-[96px]", isCollapsed && 'justify-center') }>
             <div className={cn("flex items-center", isCollapsed && 'justify-center w-full') }>
               <Image
-                src="/ams.png"
+                src="/images/ams.png"
                 alt="Numa logo"
                 width={1024}
                 height={1024}

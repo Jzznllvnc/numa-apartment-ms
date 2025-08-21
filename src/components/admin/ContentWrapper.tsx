@@ -9,7 +9,7 @@ function generatePageTitle(pathname: string): string {
   const segments = pathname.split('/').filter(Boolean)
   
   if (segments.length === 1 && segments[0] === 'admin') {
-    return 'Dashboard'
+    return 'Welcome, Owner 🤘'
   }
   
   if (segments.length >= 2 && segments[0] === 'admin') {
@@ -62,6 +62,12 @@ export function ContentWrapper({ children }: ContentWrapperProps) {
             {pageTitle}
           </span>
         </h1>
+        {/* Subtitle for admin dashboard only */}
+        {pathname === '/admin' && (
+          <p className="lg:text-lg md:text-base text-gray-600 dark:text-gray-400 mt-1 mb-1 font-medium">
+            Stay in control of your property with real-time insights.
+          </p>
+        )}
         </div>
         
         {/* Quick Actions */}
